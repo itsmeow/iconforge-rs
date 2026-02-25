@@ -1,0 +1,49 @@
+[package]
+name = "iconforge_rs"
+edition = "2024"
+version = "1.0.0"
+authors = [
+    "itsmeow <itsmeow@itsmeow.dev>",
+]
+repository = "https://github.com/itsmeow/iconforge-rs"
+license = "MIT"
+description = "Offloaded icon generation functions for BYOND and SS13"
+rust-version = "1.87"
+
+[lib]
+name = "iconforge_rs"
+path = "src/lib.rs"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "iconforge_rs_cli"
+path = "src/cli/main.rs"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = true
+debug = true
+
+[dependencies]
+twox-hash = { version = "2.1" }
+png = { version = "0.17" }
+image = { version = "0.25", default-features = false, features = [
+    "png",
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+once_cell = { version = "1.21" }
+dashmap = { version = "6.1", features = ["rayon", "serde"] }
+rayon = { version = "1.10" }
+dmi = { version = "0.4.0" }
+tracy_full = { version = "1.12.0" }
+indexmap = { version = "2.10.0", features = ["serde", "rayon"] }
+ordered-float = { version = "5.0.0", features = ["serde"] }
+thiserror = "2.0.12"
+flume = "0.11.1"
+hex = "0.4.3"
+clap = { version = "4.5.42", features = ["derive"] }
+
+[dev-dependencies]
+regex = "1"
