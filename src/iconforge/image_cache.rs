@@ -103,15 +103,12 @@ impl UniversalIcon {
 				}
 			}
 		}
-		let state = match matched_state {
-			Some(state) => state,
-			None => {
-				return Err(format!(
-					"Could not find associated icon state {} for {sprite_name}",
-					self.icon_state
-				));
-			}
-		};
+		let state = matched_state.ok_or_else(|| {
+			format!(
+				"Could not find associated icon state {} for {sprite_name}",
+				self.icon_state
+			)
+		})?;
 
 		let mut dirs = state.dirs as usize;
 		let mut dir_index = 0;
@@ -132,14 +129,9 @@ impl UniversalIcon {
 								state.dirs, state.name
 							));
 						}
-						match dir_to_dmi_index(&dir) {
-							Some(index) => index,
-							None => {
-								return Err(format!(
-									"Invalid dir in dir ordering {dir} for {sprite_name}"
-								));
-							}
-						}
+						dir_to_dmi_index(&dir).ok_or_else(|| {
+							format!("Invalid dir in dir ordering {dir} for {sprite_name}")
+						})?
 					}
 					None => {
 						return Err(format!("Invalid dir number {dir_bits} for {sprite_name}"));
@@ -179,22 +171,20 @@ impl UniversalIcon {
 			frame_offset = 0;
 		}
 
-		let mut images: Vec<RgbaImage> = Vec::new();
+		let mut images: Vec<RgbaImage> = Vec::with_capacity(frames * dirs);
 
 		for frame_index in frame_offset..(frame_offset + frames) {
 			for dir_offset in dir_index..(dir_index + dirs) {
-				match state
+				let image = state
 					.images
 					.get((frame_index * state.dirs as usize) + dir_offset)
-				{
-					Some(image) => images.push(image.clone()),
-					None => {
-						return Err(format!(
+					.ok_or_else(|| {
+						format!(
 							"Somehow got out of bounds image for dir {dir_index} and frame \
 							 {frame_offset} on {sprite_name}!"
-						));
-					}
-				}
+						)
+					})?;
+				images.push(image.clone());
 			}
 		}
 
@@ -255,7 +245,7 @@ pub fn filepath_to_dmi(icon_path: &str) -> Result<Arc<Icon>, String> {
 
 	cell.get_or_try_init(|| {
 		zone!("open_dmi_file");
-		let icon_file = File::open(&full_path).map_err(|err| {
+		let icon_file = File::open(&full_path).map(BufReader::new).map_err(|err| {
 			format!(
 				"Failed to open DMI '{}' (resolved to '{}') - {}",
 				icon_path,
@@ -264,12 +254,10 @@ pub fn filepath_to_dmi(icon_path: &str) -> Result<Arc<Icon>, String> {
 			)
 		})?;
 
-		let reader = BufReader::new(icon_file);
-
 		zone!("parse_dmi");
-		Ok(Arc::new(Icon::load(reader).map_err(|err| {
-			format!("DMI '{icon_path}' failed to parse - {err}")
-		})?))
+		Icon::load(icon_file)
+			.map(Arc::new)
+			.map_err(|err| format!("DMI '{icon_path}' failed to parse - {err}"))
 	})
 	.cloned()
 }

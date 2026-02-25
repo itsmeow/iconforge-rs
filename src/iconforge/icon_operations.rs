@@ -122,11 +122,11 @@ pub fn crop(image: &mut RgbaImage, x1: i32, y1: i32, x2: i32, y2: i32) {
 	}
 }
 
-pub fn convert_byond_image_offset(x_offset: i32, y_offset: i32) -> (i32, i32) {
+pub const fn convert_byond_image_offset(x_offset: i32, y_offset: i32) -> (i32, i32) {
 	(x_offset - 1, y_offset - 1)
 }
 
-pub fn convert_byond_crop_image_coords(
+pub const fn convert_byond_crop_image_coords(
 	image_height: i32,
 	x1: i32,
 	y1: i32,
@@ -642,26 +642,20 @@ pub fn blend_images_other(
 	last_matched_state: &mut Option<IconState>,
 ) -> Result<Vec<RgbaImage>, Error> {
 	zone!("blend_images_other");
-	let base_icon_state = match first_matched_state {
-		Some(state) => state,
-		None => {
-			return Err(Error::IconForge(
-				"No value in first_matched_state during blend_images_other. This should never \
-				 happen, unless a GAGS config doesn't start with an icon_state."
-					.to_string(),
-			));
-		}
-	};
-	let blending_icon_state = match last_matched_state {
-		Some(state) => state,
-		None => {
-			return Err(Error::IconForge(
-				"No value in last_matched_state during blend_images_other. This should never \
-				 happen, unless a GAGS config doesn't start with an icon_state."
-					.to_string(),
-			));
-		}
-	};
+	let base_icon_state = first_matched_state.as_mut().ok_or_else(|| {
+		Error::IconForge(
+			"No value in first_matched_state during blend_images_other. This should never happen, \
+			 unless a GAGS config doesn't start with an icon_state."
+				.to_string(),
+		)
+	})?;
+	let blending_icon_state = last_matched_state.as_mut().ok_or_else(|| {
+		Error::IconForge(
+			"No value in last_matched_state during blend_images_other. This should never happen, \
+			 unless a GAGS config doesn't start with an icon_state."
+				.to_string(),
+		)
+	})?;
 	let errors = Arc::new(Mutex::new(Vec::<String>::new()));
 	let expected_length_first = base_icon_state.dirs as u32 * base_icon_state.frames;
 	// Make sure our logic sound... First and last should correctly match these two
@@ -736,20 +730,19 @@ pub fn blend_images_other(
 			// state are used for the final result.
 			base_icon_state.frames = blending_icon_state.frames;
 			// Update delays
-			let mut new_delays =
-				base_icon_state
-					.delay
-					.clone()
-					.unwrap_or(vec![1.0; base_icon_state.frames as usize]);
+			let mut new_delays = base_icon_state
+				.delay
+				.clone()
+				.unwrap_or_else(|| vec![1.0; base_icon_state.frames as usize]);
 			let delay_diff = base_icon_state.frames as i32 - new_delays.len() as i32;
 
 			match delay_diff.cmp(&0) {
 				std::cmp::Ordering::Greater => {
 					// Extend the number of delays to match frames by copying the first delay
-					new_delays.extend(vec![
-						*new_delays.first().unwrap_or(&1.0);
-						delay_diff as usize
-					]);
+					new_delays.extend(std::iter::repeat_n(
+						new_delays.first().copied().unwrap_or(1.0),
+						delay_diff as usize,
+					));
 				}
 				std::cmp::Ordering::Less => {
 					// sometimes DMIs can contain more delays than frames because they retain old
@@ -904,10 +897,8 @@ impl Transform {
 				images = image_data.map_cloned_images(|image| turn(image, angle.into_inner()));
 			}
 			Transform::Shift { dir, offset, wrap } => {
-				let dir = match dmi::dirs::Dirs::from_bits(*dir) {
-					Some(dir) => dir,
-					None => return Err(format!("Invalid dir specified for Shift: {dir}")),
-				};
+				let dir = dmi::dirs::Dirs::from_bits(*dir)
+					.ok_or_else(|| format!("Invalid dir specified for Shift: {dir}"))?;
 				images =
 					image_data.map_cloned_images(|image| shift(image, dir, *offset, *wrap != 0));
 			}

@@ -516,7 +516,7 @@ pub fn generate_spritesheet(
 					}
 				};
 			let mut no_transforms = Option::<&UniversalIcon>::None;
-			let unique_icons = DashSet::<&UniversalIcon>::new();
+			let unique_icons = DashSet::<&UniversalIcon>::with_capacity(icons.len());
 			{
 				zone!("map_unique");
 				icons.iter().for_each(|(_, icon)| {
@@ -607,7 +607,8 @@ pub fn generate_spritesheet(
 	};
 	{
 		zone!("precreate_dirs");
-		let mut parent_dirs = std::collections::HashSet::<std::path::PathBuf>::new();
+		let mut parent_dirs =
+			std::collections::HashSet::<std::path::PathBuf>::with_capacity(size_entries.len());
 
 		for (size_id, _) in &size_entries {
 			let output_path = base_path.join(format!(
@@ -807,7 +808,7 @@ fn transform_leaves(
 			"Transform depth exceeded 128. https://www.youtube.com/watch?v=CUjrySBwi5Q",
 		));
 	}
-	let next_transforms = DashMap::<Transform, Vec<&UniversalIcon>>::new();
+	let next_transforms = DashMap::<Transform, Vec<&UniversalIcon>>::with_capacity(icons.len());
 	let errors = Mutex::new(Vec::<String>::new());
 
 	{
@@ -989,7 +990,7 @@ pub fn cache_valid(
 	}
 	Ok(serde_json::to_string::<CacheResult>(&CacheResult {
 		result: String::from("1"),
-		fail_reason: String::from(""),
+		fail_reason: String::default(),
 	})?)
 }
 

@@ -54,7 +54,7 @@ enum GAGSLayer {
 }
 
 impl GAGSLayer {
-	fn get_blendmode_str(&self) -> &String {
+	const fn get_blendmode_str(&self) -> &String {
 		match self {
 			GAGSLayer::IconState {
 				icon_state: _,
@@ -102,12 +102,7 @@ pub fn load_gags_config(
 		zone!("gags_from_json");
 		gags_config = serde_json::from_str::<GAGSConfig>(config_json)?;
 	}
-	let icon_data = match filepath_to_dmi(config_icon_path) {
-		Ok(data) => data,
-		Err(err) => {
-			return Err(Error::IconForge(err));
-		}
-	};
+	let icon_data = filepath_to_dmi(config_icon_path).map_err(Error::IconForge)?;
 	{
 		zone!("gags_insert_config");
 		GAGS_CACHE.insert(config_path.to_owned(), GAGSData {
@@ -123,15 +118,11 @@ pub fn load_gags_config(
 /// output_dmi_path with the config's states.
 pub fn gags(config_path: &str, colors: &str, output_dmi_path: &str) -> Result<String, Error> {
 	zone!("gags");
-	let gags_data = match GAGS_CACHE.get(config_path) {
-		Some(config) => config,
-		None => {
-			return Err(Error::IconForge(format!(
-				"Provided config_path {config_path} has not been loaded by \
-				 iconforge_load_gags_config!"
-			)));
-		}
-	};
+	let gags_data = GAGS_CACHE.get(config_path).ok_or_else(|| {
+		Error::IconForge(format!(
+			"Provided config_path {config_path} has not been loaded by iconforge_load_gags_config!"
+		))
+	})?;
 
 	let colors_vec = colors
 		.split('#')
@@ -212,16 +203,14 @@ pub fn gags(config_path: &str, colors: &str, output_dmi_path: &str) -> Result<St
 		std::fs::create_dir_all(path.parent().unwrap())?;
 		let mut output_file = File::create(path)?;
 
-		if let Err(err) = (Icon {
+		Icon {
 			version: DmiVersion::default(),
 			width: gags_data.config_icon.width,
 			height: gags_data.config_icon.height,
 			states: output_states.lock().unwrap().to_owned(),
 		}
-		.save(&mut output_file))
-		{
-			return Err(Error::IconForge(format!("Error during icon saving: {err}")));
-		}
+		.save(&mut output_file)
+		.map_err(|err| Error::IconForge(format!("Error during icon saving: {err}")))?;
 	}
 
 	Ok(String::from("OK"))
@@ -237,30 +226,24 @@ fn gags_internal(
 	last_matched_state: &mut Option<IconState>,
 ) -> Result<Vec<RgbaImage>, String> {
 	zone!("gags_internal");
-	let gags_data = match GAGS_CACHE.get(config_path) {
-		Some(config) => config,
-		None => {
-			return Err(format!(
-				"Provided config_path {config_path} has not been loaded by \
-				 iconforge_load_gags_config (from gags_internal)!"
-			));
-		}
-	};
+	let gags_data = GAGS_CACHE.get(config_path).ok_or_else(|| {
+		format!(
+			"Provided config_path {config_path} has not been loaded by iconforge_load_gags_config \
+			 (from gags_internal)!"
+		)
+	})?;
 
-	let layer_groups = match gags_data.config.get(icon_state) {
-		Some(data) => data,
-		None => {
-			return Err(format!(
-				"Provided config_path {config_path} did not contain requested icon_state \
-				 {icon_state} for reference type."
-			));
-		}
-	};
+	let layer_groups = gags_data.config.get(icon_state).ok_or_else(|| {
+		format!(
+			"Provided config_path {config_path} did not contain requested icon_state {icon_state} \
+			 for reference type."
+		)
+	})?;
 	{
 		zone!("gags_create_icon_state");
 		let mut first_matched_state_internal: Option<IconState> = None;
 		let mut last_matched_state_internal: Option<IconState> = None;
-		let transformed_images = match generate_layer_groups_for_iconstate(
+		let transformed_images = generate_layer_groups_for_iconstate(
 			icon_state,
 			colors_vec,
 			layer_groups,
@@ -268,12 +251,7 @@ fn gags_internal(
 			last_external_images,
 			&mut first_matched_state_internal,
 			&mut last_matched_state_internal,
-		) {
-			Ok(images) => images,
-			Err(err) => {
-				return Err(err);
-			}
-		};
+		)?;
 		{
 			zone!("update_first_matched_state");
 			if first_matched_state.is_none() && first_matched_state_internal.is_some() {
@@ -477,13 +455,12 @@ fn generate_layer_for_iconstate(
 		}),
 	};
 
-	match images_result {
-		Some(images) => Ok(images),
-		None => Err(format!(
+	images_result.ok_or_else(|| {
+		format!(
 			"No images found for GAGS state {state_name} for GAGS config {} !",
 			gags_data.config_path
-		)),
-	}
+		)
+	})
 }
 
 pub fn map_cloned_images<F>(images: &Vec<RgbaImage>, do_fn: F) -> Vec<RgbaImage>
