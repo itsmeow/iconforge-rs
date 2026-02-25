@@ -1,54 +1,54 @@
 use crate::error::Error;
 use std::{
-    backtrace::Backtrace,
-    borrow::Cow,
-    cell::RefCell,
-    ffi::{CStr, CString},
-    fs::OpenOptions,
-    io::Write,
-    os::raw::{c_char, c_int},
-    slice,
-    sync::Once,
+	backtrace::Backtrace,
+	borrow::Cow,
+	cell::RefCell,
+	ffi::{CStr, CString},
+	fs::OpenOptions,
+	io::Write,
+	os::raw::{c_char, c_int},
+	slice,
+	sync::Once,
 };
 
 static SET_HOOK: Once = Once::new();
 static EMPTY_STRING: c_char = 0;
 thread_local! {
-    static RETURN_STRING: RefCell<CString> = RefCell::new(CString::default());
+	static RETURN_STRING: RefCell<CString> = RefCell::new(CString::default());
 }
 
 pub unsafe fn parse_args<'a>(argc: c_int, argv: *const *const c_char) -> Vec<Cow<'a, str>> {
-    if argc == 0 || argv.is_null() {
-        return Vec::new();
-    }
-    unsafe {
-        slice::from_raw_parts(argv, argc as usize)
-            .iter()
-            .map(|ptr| CStr::from_ptr(*ptr))
-            .map(|cstr| cstr.to_string_lossy())
-            .collect()
-    }
+	if argc == 0 || argv.is_null() {
+		return Vec::new();
+	}
+	unsafe {
+		slice::from_raw_parts(argv, argc as usize)
+			.iter()
+			.map(|ptr| CStr::from_ptr(*ptr))
+			.map(|cstr| cstr.to_string_lossy())
+			.collect()
+	}
 }
 
 pub fn byond_return(value: Option<Vec<u8>>) -> *const c_char {
-    match value {
-        None => &EMPTY_STRING,
-        Some(vec) if vec.is_empty() => &EMPTY_STRING,
-        Some(vec) => RETURN_STRING.with(|cell| {
-            // Panicking over an FFI boundary is bad form, so if a NUL ends up
-            // in the result, just truncate.
-            let cstring = match CString::new(vec) {
-                Ok(s) => s,
-                Err(e) => {
-                    let (pos, mut vec) = (e.nul_position(), e.into_vec());
-                    vec.truncate(pos);
-                    CString::new(vec).unwrap_or_default()
-                }
-            };
-            cell.replace(cstring);
-            cell.borrow().as_ptr()
-        }),
-    }
+	match value {
+		None => &EMPTY_STRING,
+		Some(vec) if vec.is_empty() => &EMPTY_STRING,
+		Some(vec) => RETURN_STRING.with(|cell| {
+			// Panicking over an FFI boundary is bad form, so if a NUL ends up
+			// in the result, just truncate.
+			let cstring = match CString::new(vec) {
+				Ok(s) => s,
+				Err(e) => {
+					let (pos, mut vec) = (e.nul_position(), e.into_vec());
+					vec.truncate(pos);
+					CString::new(vec).unwrap_or_default()
+				}
+			};
+			cell.replace(cstring);
+			cell.borrow().as_ptr()
+		}),
+	}
 }
 
 #[macro_export]
@@ -90,57 +90,58 @@ macro_rules! byond_fn {
 
 // Easy version checker. It's in this file so it is always included
 byond_fn!(
-    fn get_version() {
-        Some(env!("CARGO_PKG_VERSION"))
-    }
+	fn get_version() {
+		Some(env!("CARGO_PKG_VERSION"))
+	}
 );
 
 /// Print any panics before exiting.
 pub fn set_panic_hook() {
-    SET_HOOK.call_once(|| {
-        std::panic::set_hook(Box::new(|panic_info| {
-            let mut file = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open("iconforge-rs-panic.log")
-                .unwrap();
-            file.write_all(
-                panic_info
-                    .payload()
-                    .downcast_ref::<&'static str>()
-                    .map(|payload| payload.to_string())
-                    .or_else(|| panic_info.payload().downcast_ref::<String>().cloned())
-                    .unwrap()
-                    .as_bytes(),
-            )
-            .expect("Failed to extract error payload");
-            file.write_all(Backtrace::capture().to_string().as_bytes())
-                .expect("Failed to extract error backtrace");
-        }))
-    });
+	SET_HOOK.call_once(|| {
+		std::panic::set_hook(Box::new(|panic_info| {
+			let mut file = OpenOptions::new()
+				.append(true)
+				.create(true)
+				.open("iconforge-rs-panic.log")
+				.unwrap();
+			file.write_all(
+				panic_info
+					.payload()
+					.downcast_ref::<&'static str>()
+					.map(|payload| payload.to_string())
+					.or_else(|| panic_info.payload().downcast_ref::<String>().cloned())
+					.unwrap()
+					.as_bytes(),
+			)
+			.expect("Failed to extract error payload");
+			file.write_all(Backtrace::capture().to_string().as_bytes())
+				.expect("Failed to extract error backtrace");
+		}))
+	});
 }
 
 #[allow(dead_code)] // Used depending on feature set
-/// Utility for BYOND functions to catch panic unwinds safely and return a Result<String, Error>, as expected.
-/// Usage: catch_panic(|| internal_safe_function(arguments))
+/// Utility for BYOND functions to catch panic unwinds safely and return a
+/// Result<String, Error>, as expected. Usage: catch_panic(||
+/// internal_safe_function(arguments))
 pub fn catch_panic<F, R>(f: F) -> Result<R, Error>
 where
-    F: FnOnce() -> R + std::panic::UnwindSafe,
+	F: FnOnce() -> R + std::panic::UnwindSafe,
 {
-    match std::panic::catch_unwind(f) {
-        Ok(o) => Ok(o),
-        Err(e) => {
-            let message: Option<String> = e
-                .downcast_ref::<&'static str>()
-                .map(|payload| payload.to_string())
-                .or_else(|| e.downcast_ref::<String>().cloned());
-            Err(Error::Panic(
-                message
-                    .unwrap_or(String::from(
-                        "Failed to stringify panic! Check rustg-panic.log!",
-                    ))
-                    .to_owned(),
-            ))
-        }
-    }
+	match std::panic::catch_unwind(f) {
+		Ok(o) => Ok(o),
+		Err(e) => {
+			let message: Option<String> = e
+				.downcast_ref::<&'static str>()
+				.map(|payload| payload.to_string())
+				.or_else(|| e.downcast_ref::<String>().cloned());
+			Err(Error::Panic(
+				message
+					.unwrap_or(String::from(
+						"Failed to stringify panic! Check rustg-panic.log!",
+					))
+					.to_owned(),
+			))
+		}
+	}
 }

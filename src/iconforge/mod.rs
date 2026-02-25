@@ -7,7 +7,8 @@ pub mod blending;
 pub mod byond;
 /// GAGS reimplementation
 pub mod gags;
-/// Contains utility functions for transforming images/icons such as crops, scales, blending
+/// Contains utility functions for transforming images/icons such as crops,
+/// scales, blending
 pub mod icon_operations;
 /// Caching for DMI and UniversalIcon image data
 pub mod image_cache;

@@ -3,33 +3,33 @@
 use std::{fs::File, io::Write};
 
 macro_rules! feature_dm_file {
-    ($name:expr) => {
-        &"dmsrc/{}.dm".replace("{}", $name)
-    };
+	($name:expr) => {
+		&"dmsrc/{}.dm".replace("{}", $name)
+	};
 }
 
 fn main() {
-    let mut f = File::create("target/iconforge_rs.dm").unwrap();
+	let mut f = File::create("target/iconforge_rs.dm").unwrap();
 
-    // header
-    writeln!(
-        f,
-        "{}",
-        std::fs::read_to_string(feature_dm_file!("main")).unwrap()
-    )
-    .unwrap();
+	// header
+	writeln!(
+		f,
+		"{}",
+		std::fs::read_to_string(feature_dm_file!("main")).unwrap()
+	)
+	.unwrap();
 
-    writeln!(
-        f,
-        "{}",
-        std::fs::read_to_string(feature_dm_file!("iconforge")).unwrap()
-    )
-    .unwrap();
+	writeln!(
+		f,
+		"{}",
+		std::fs::read_to_string(feature_dm_file!("iconforge")).unwrap()
+	)
+	.unwrap();
 
-    writeln!(
-        f,
-        "{}",
-        std::fs::read_to_string(feature_dm_file!("universal_icon")).unwrap()
-    )
-    .unwrap();
+	writeln!(
+		f,
+		"{}",
+		std::fs::read_to_string(feature_dm_file!("universal_icon")).unwrap()
+	)
+	.unwrap();
 }
