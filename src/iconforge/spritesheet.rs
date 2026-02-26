@@ -19,7 +19,7 @@ use std::{
 	collections::{HashMap, HashSet},
 	fs::File,
 	hash::{BuildHasherDefault, Hasher},
-	io::{BufReader, Read},
+	io::Read,
 	path::PathBuf,
 	sync::{Arc, Mutex, RwLock},
 };
