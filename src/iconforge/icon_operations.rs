@@ -465,7 +465,7 @@ pub fn turn_rotsprite(image: &mut RgbaImage, angle: f32) {
 		angle as f64,
 	) {
 		Ok(retval) => retval,
-		// if it errors (which shoudl not happen to be fair), we fall back to normal turn
+		// if it errors (which should not happen to be fair), we fall back to normal turn
 		Err(_) => {
 			turn(image, angle);
 			return;
