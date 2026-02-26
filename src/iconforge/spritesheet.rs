@@ -1005,7 +1005,7 @@ const CONSISTENT_XXHASH_SEED: u64 = 17479268743136991876;
 
 pub fn fixed_twox_file(path: &str) -> Result<String, Error> {
 	let mut hasher = XxHash64::with_seed(CONSISTENT_XXHASH_SEED);
-	let mut file = File::open(path).map(BufReader::new)?;
+	let mut file = File::open(path)?;
 	FILE_HASH_BUFFER.with_borrow_mut(|buffer| {
 		loop {
 			let bytes_read = file.read(buffer)?;
