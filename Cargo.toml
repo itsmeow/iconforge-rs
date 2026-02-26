@@ -40,7 +40,6 @@ thiserror = "2.0.12"
 flume = "0.11.1"
 hex = "0.4.3"
 clap = { version = "4.5.42", features = ["derive"] }
-rotsprite = "0.1.4"
 
 [dev-dependencies]
 regex = "1"
