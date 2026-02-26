@@ -68,6 +68,12 @@
 	transform.draw_box(color, x1, y1, x2, y2)
 	return src
 
+/datum/universal_icon/proc/rotate_rotsprite(angle)
+	if(!transform)
+		transform = new
+	transform.rotate_rotsprite(angle)
+	return src
+
 /datum/universal_icon/proc/map_colors_rgba(rr, rg, rb, ra, gr, gg, gb, ga, br, bg, bb, ba, ar, ag, ab, aa, r0=0, g0=0, b0=0, a0=0)
 	if(!transform)
 		transform = new
@@ -189,7 +195,7 @@
 				)
 			if(ICONFORGE_FLIP)
 				target.Flip(transform["dir"])
-			if(ICONFORGE_TURN)
+			if(ICONFORGE_TURN, ICONFORGE_TURN_ROTSPRITE)
 				target.Turn(transform["angle"])
 			if(ICONFORGE_SHIFT)
 				target.Shift(transform["dir"], transform["offset"], transform["wrap"])
@@ -225,6 +231,9 @@
 
 /datum/icon_transformer/proc/draw_box(color, x1, y1, x2=x1, y2=y1)
 	transforms += list(list("type" = ICONFORGE_DRAW_BOX, "color" = color, "x1" = x1, "y1" = y1, "x2" = x2, "y2" = y2))
+
+/datum/icon_transformer/proc/rotate_rotsprite(angle)
+	transforms += list(list("type" = ICONFORGE_TURN_ROTSPRITE, "angle" = angle))
 
 /datum/icon_transformer/proc/map_colors(rr, rg, rb, ra, gr, gg, gb, ga, br, bg, bb, ba, ar, ag, ab, aa, r0=0, g0=0, b0=0, a0=0)
 	transforms += list(list(

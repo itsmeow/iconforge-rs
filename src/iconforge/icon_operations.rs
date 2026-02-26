@@ -434,6 +434,49 @@ pub fn draw_box(image: &mut RgbaImage, color: [u8; 4], x1: i32, y1: i32, x2: i32
 		});
 }
 
+pub fn turn_rotsprite(image: &mut RgbaImage, angle: f32) {
+	zone!("turn_rot");
+	// Optimized rotations
+	match angle {
+		-360.0 | 360.0 | 0.0 => {
+			return;
+		}
+		90.0 | -270.0 => {
+			*image = imageops::rotate90(image);
+			return;
+		}
+		270.0 | -90.0 => {
+			*image = imageops::rotate270(image);
+			return;
+		}
+		-180.0 | 180.0 => {
+			*image = imageops::rotate180(image);
+			return;
+		}
+		_ => {}
+	}
+
+	let width = image.width() as usize;
+	let pixels: Vec<Rgba<u8>> = image.pixels().copied().collect();
+	let (rotated_width, rotated_height, rotated) = match rotsprite::rotsprite(
+		&pixels,
+		&Rgba([0; 4]), // The color for pixels that couldn't be found
+		width,
+		angle as f64,
+	) {
+		Ok(retval) => retval,
+		// if it errors (which shoudl not happen to be fair), we fall back to normal turn
+		Err(_) => {
+			turn(image, angle);
+			return;
+		}
+	};
+
+	*image = RgbaImage::from_fn(rotated_width as u32, rotated_height as u32, |x, y| {
+		rotated[rotated_width * y as usize + x as usize]
+	});
+}
+
 #[rustfmt::skip]
 #[allow(clippy::too_many_arguments)]
 pub fn map_colors(
@@ -932,6 +975,10 @@ impl Transform {
 				let rgba = hex_to_rgba(&hex)?;
 				images =
 					image_data.map_cloned_images(|image| draw_box(image, rgba, x1, y1, x2, y2));
+			}
+			Transform::TurnRotsprite { angle } => {
+				images =
+					image_data.map_cloned_images(|image| turn_rotsprite(image, angle.into_inner()));
 			}
 		}
 		Ok(UniversalIconData {

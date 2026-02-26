@@ -110,6 +110,9 @@ pub enum Transform {
 		x2: Option<i32>,
 		y2: Option<i32>,
 	},
+	TurnRotsprite {
+		angle: OrderedFloat<f32>,
+	},
 }
 
 #[derive(Clone)]
