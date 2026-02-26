@@ -436,6 +436,26 @@ pub fn draw_box(image: &mut RgbaImage, color: [u8; 4], x1: i32, y1: i32, x2: i32
 
 pub fn turn_rotsprite(image: &mut RgbaImage, angle: f32) {
 	zone!("turn_rot");
+	// Optimized rotations
+	match angle {
+		-360.0 | 360.0 | 0.0 => {
+			return;
+		}
+		90.0 | -270.0 => {
+			*image = imageops::rotate90(image);
+			return;
+		}
+		270.0 | -90.0 => {
+			*image = imageops::rotate270(image);
+			return;
+		}
+		-180.0 | 180.0 => {
+			*image = imageops::rotate180(image);
+			return;
+		}
+		_ => {}
+	}
+
 	let width = image.width() as usize;
 	let pixels: Vec<Rgba<u8>> = image.pixels().copied().collect();
 	let (rotated_width, rotated_height, rotated) = match rotsprite::rotsprite(
