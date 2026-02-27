@@ -3,7 +3,6 @@ use std::{fs::File, io::Read, path::Path};
 use clap::{Parser, Subcommand};
 use iconforge_rs::iconforge::spritesheet::{generate_headless, generate_spritesheet};
 
-/// Simple program to greet a person
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Cli {

@@ -72,7 +72,7 @@
 /// sprites: The new input that will be passed to iconforge_generate().
 /// Returns a CacheResult with the following structure: list(
 ///     "result": "1" (if cache is valid) or "0" (if cache is invalid)
-///     "fail_reason": "" (emtpy string if valid, otherwise a string containing the invalidation reason or an error with ERROR: prefixed.)
+///     "fail_reason": "" (empty string if valid, otherwise a string containing the invalidation reason or an error with ERROR: prefixed.)
 /// )
 /// In the case of an unrecoverable panic from within Rust, this function ONLY returns a string containing the error.
 #define iconforge_cache_valid(input_hash, dmi_hashes, sprites) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_cache_valid")(input_hash, dmi_hashes, sprites)

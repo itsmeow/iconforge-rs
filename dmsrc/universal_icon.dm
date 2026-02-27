@@ -154,7 +154,7 @@
 		return
 	var/list/result = iconforge_generate_headless(file_path, json_encode(list("[output_icon_state_name]" = src.to_list())), FALSE)
 	if(!islist(result))
-		CRASH("Unparseable result from iconforge_generate_headless for '[file_path]': [result]")
+		CRASH("Unparsable result from iconforge_generate_headless for '[file_path]': [result]")
 	if(result["file_path"] != file_path)
 		CRASH("Fatal errors during iconforge_generate_headless for '[file_path]': [result["error"]]")
 	. = icon(file(file_path))

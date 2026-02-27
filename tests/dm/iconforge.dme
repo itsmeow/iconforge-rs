@@ -373,7 +373,7 @@
 		var/file_path = "tmp/headless_iconforge_rust_[expected_size].dmi"
 		var/list/result = iconforge_generate_headless(file_path, entries_json, FALSE)
 		if(!islist(result))
-			world.log << "runtime error: Unparseable result from iconforge_generate_headless for '[file_path]': [result]"
+			world.log << "runtime error: Unparsable result from iconforge_generate_headless for '[file_path]': [result]"
 			continue
 		if(result["file_path"] != file_path)
 			world.log << "runtime error: Fatal errors during iconforge_generate_headless for '[file_path]': [result["error"]]"
@@ -411,7 +411,7 @@
 /proc/headless_must_error(file_path, sprites, error_text)
 	var/list/result = iconforge_generate_headless(file_path, sprites, FALSE)
 	if(!islist(result))
-		world.log << "runtime error: Unparseable result from iconforge_generate_headless for '[file_path]': [result]"
+		world.log << "runtime error: Unparsable result from iconforge_generate_headless for '[file_path]': [result]"
 	if(result["file_path"] == file_path)
 		world.log << "runtime error: iconforge_generate_headless output file_path when an error was expected ([error_text])"
 	if(!isnull(result["error"]) && length(result["error"]))

@@ -1,0 +1,7 @@
+[default]
+
+[default.extend-words]
+BYOND = "BYOND"
+ba = "ba"
+PN = "PN"
+DEFIN = "DEFIN"
