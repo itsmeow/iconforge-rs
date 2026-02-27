@@ -112,33 +112,33 @@ IconForge also offers near-full parity on most native BYOND operations, ensuring
 
 Parity is covered by tests and checked against BYOND's output as part of CI. This is a table of the standard to which they are tested against.
 
-| Operation / Blend Mode     | Parity Status   | Notes                                                            |
-|----------------------------|-----------------|------------------------------------------------------------------|
-| **BYOND procs**            |                 |                                                                  |
-| `Scale()`                  |⚠️ Partial Parity| Full parity for some types; excluded for odd sizes (e.g., 8x19). |
-| `Crop()`                   | ✅ Full Parity  | Extensively tested for expansion and shrinking.                  |
-| `Blend()`                  | ✅ Full Parity  | See Blend Modes.                                                 |
-| `MapColors()`              | ✅ Full Parity  | Supports RGB, RGBA (Hex/Num), and Inversion.                     |
-| `Flip()`                   | ✅ Full Parity  | Tested for all 8 cardinal/ordinal directions.                    |
-| `Turn()`                   |⚠️ Partial Parity| Parity for 90° increments only, others are visually similar.     |
-| `Shift()`                  | ✅ Full Parity  | Supports wrapping, no-wrap, and overflows.                       |
-| `SwapColor()`              | ✅ Full Parity  | Handles various alpha/hex combinations.                          |
-| `DrawBox()`                | ✅ Full Parity  | Supports coordinate ranges and alpha.                            |
-| **BYOND Icon Blend Modes** |                 |                                                                  |
-| `ICON_ADD`                 | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_SUBTRACT`            | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_MULTIPLY`            | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_OVERLAY`             | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_AND`                 | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_OR`                  | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| `ICON_UNDERLAY`            | ✅ Full Parity  | Within +/- 1 bit per pixel.                                      |
-| **Other Features**         |                 |                                                                  |
-| GAGS API                   | ✅ Full Parity  | All layer types and features are supported.                      |
-| Blend Offset Support       | ✅ Full Parity  |                                                                  |
-| Mixed-Dir Blending         |⚠️ Partial Parity| 4/8 onto single dir or single dir onto 4/8 only.                 |
-| Mixed-Frame Blending       |⚠️ Partial Parity| Multi-frame icons onto single frame only.                        |
-| Movement States            |❌Not implemented|                                                                  |
-| Greyscale/Non-RGBA icons   |❌Not implemented| IconForge will only output RGBA icons.                           |
+| Feature                    | Transform Define        | Parity Status      | Notes                                                            |
+|----------------------------|-------------------------|--------------------|------------------------------------------------------------------|
+| **BYOND procs**            |                         |                    |                                                                  |
+| `Scale()`                  | `ICONFORGE_SCALE`       | ⚠️ Partial Parity  | Full parity for some types; excluded for odd sizes (e.g., 8x19). |
+| `Crop()`                   | `ICONFORGE_CROP`        | ✅ Full Parity     | Extensively tested for expansion and shrinking.                  |
+| `Blend() (Icon)`           | `ICONFORGE_BLEND_ICON`  | ✅ Full Parity     | Supports x/y offsets. See Blend Modes below.                     |
+| `Blend() (Color)`          | `ICONFORGE_BLEND_COLOR` | ✅ Full Parity     | See Blend Modes below.                                           |
+| `MapColors()`              | `ICONFORGE_MAP_COLORS`  | ✅ Full Parity     | Supports RGB, RGBA (Hex/Num), and Inversion.                     |
+| `Flip()`                   | `ICONFORGE_FLIP`        | ✅ Full Parity     | Tested for all 8 cardinal/ordinal directions.                    |
+| `Turn()`                   | `ICONFORGE_TURN`        | ⚠️ Partial Parity  | Parity for 90° increments only.                                  |
+| `Shift()`                  | `ICONFORGE_SHIFT`       | ✅ Full Parity     | Supports wrapping, no-wrap, and overflows.                       |
+| `SwapColor()`              | `ICONFORGE_SWAP_COLOR`  | ✅ Full Parity     | Handles various alpha/hex combinations.                          |
+| `DrawBox()`                | `ICONFORGE_DRAW_BOX`    | ✅ Full Parity     | Supports coordinate ranges and alpha.                            |
+| **BYOND Icon Blend Modes** |                         |                    |                                                                  |
+| `ICON_ADD`                 | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_SUBTRACT`            | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_MULTIPLY`            | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_OVERLAY`             | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_AND`                 | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_OR`                  | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| `ICON_UNDERLAY`            | —                       | ✅ Full Parity     | Within +/- 1 bit per pixel.                                      |
+| **Other Features**         |                         |                    |                                                                  |
+| GAGS API                   | —                       | ✅ Full Parity     | Supported via GAGS ColorMatrix layer type.                       |
+| Mixed-Dir Blending         | —                       | ⚠️ Partial Parity  | 4/8 onto single dir or single dir onto 4/8 only.                 |
+| Mixed-Frame Blending       | —                       | ⚠️ Partial Parity  | Multi-frame icons onto single frame only.                        |
+| Movement States            | —                       | ❌ Not Implemented |                                                                  |
+| Greyscale/Non-RGBA         | —                       | ❌ Not Implemented | IconForge will only output RGBA icons.                           |
 
 ### Notable Differences
 
