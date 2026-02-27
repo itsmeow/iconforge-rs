@@ -1,5 +1,13 @@
 #define uni_icon(I, icon_state, rest...) new /datum/universal_icon(I, icon_state, ##rest)
 #define iconforge_hex2num(X) text2num(X, 16)
+#define iconforge_rgb2hex(part, text) var/r_##part = iconforge_hex2num(copytext(text, 2, 4)) / 255; \
+var/g_##part = iconforge_hex2num(copytext(text, 4, 6)) / 255; \
+var/b_##part = iconforge_hex2num(copytext(text, 6, 8)) / 255
+#define iconforge_rgba2hex(part, text) var/r_##part = iconforge_hex2num(copytext(text, 2, 4)) / 255; \
+var/g_##part = iconforge_hex2num(copytext(text, 4, 6)) / 255; \
+var/b_##part = iconforge_hex2num(copytext(text, 6, 8)) / 255 \
+var/a_##part = iconforge_hex2num(copytext(text, 8, 10)) / 255
+
 
 /datum/universal_icon
 	var/icon/icon_file
@@ -68,6 +76,25 @@
 	transform.draw_box(color, x1, y1, x2, y2)
 	return src
 
+/// Infers which map_colors function is desired from the number of arguments and their contents.
+/// This will offer behavior similar to BYOND's MapColors() function, but it must be an ordered list rather than raw arguments.
+/datum/universal_icon/proc/map_colors_inferred(list/color_args)
+	var/num_args = length(color_args)
+	if(num_args <= 20 || num_args >= 16)
+		src.map_colors_rgba(arglist(color_args))
+	else if(num_args <= 12 || num_args >= 9)
+		src.map_colors_rgb(arglist(color_args))
+	else if(num_args == 5)
+		src.map_colors_rgba_hex(arglist(color_args))
+	else if(num_args == 4)
+		// is there alpha in the hex?
+		if(length(color_args[3]) == 7 || length(color_args[3]) == 4)
+			src.map_colors_rgb_hex(arglist(color_args))
+		else
+			src.map_colors_rgba_hex(arglist(color_args))
+	else if(num_args == 3)
+		src.map_colors_rgb_hex(arglist(color_args))
+
 /datum/universal_icon/proc/map_colors_rgba(rr, rg, rb, ra, gr, gg, gb, ga, br, bg, bb, ba, ar, ag, ab, aa, r0=0, g0=0, b0=0, a0=0)
 	if(!transform)
 		transform = new
@@ -83,54 +110,22 @@
 /datum/universal_icon/proc/map_colors_rgb_hex(r_rgb, g_rgb, b_rgb, rgb0=rgb(0,0,0))
 	if(!transform)
 		transform = new
-	var/rr = iconforge_hex2num(copytext(r_rgb, 2, 4)) / 255
-	var/rg = iconforge_hex2num(copytext(r_rgb, 4, 6)) / 255
-	var/rb = iconforge_hex2num(copytext(r_rgb, 6, 8)) / 255
-
-	var/gr = iconforge_hex2num(copytext(g_rgb, 2, 4)) / 255
-	var/gg = iconforge_hex2num(copytext(g_rgb, 4, 6)) / 255
-	var/gb = iconforge_hex2num(copytext(g_rgb, 6, 8)) / 255
-
-	var/br = iconforge_hex2num(copytext(b_rgb, 2, 4)) / 255
-	var/bg = iconforge_hex2num(copytext(b_rgb, 4, 6)) / 255
-	var/bb = iconforge_hex2num(copytext(b_rgb, 6, 8)) / 255
-
-	var/r0 = iconforge_hex2num(copytext(rgb0, 2, 4)) / 255
-	var/b0 = iconforge_hex2num(copytext(rgb0, 4, 6)) / 255
-	var/g0 = iconforge_hex2num(copytext(rgb0, 6, 8)) / 255
-
-	transform.map_colors(rr, rg, rb, 0, gr, gg, gb, 0, br, bg, bb, 0, 0, 0, 0, 1, r0, b0, g0, 0)
+    iconforge_rgb2hex(r, r_rgb)
+    iconforge_rgb2hex(g, g_rgb)
+    iconforge_rgb2hex(b, b_rgb)
+    iconforge_rgb2hex(z, rgb0)
+    transform.map_colors(r_r, g_r, b_r, 0, r_g, g_g, b_g, 0, r_b, g_b, b_b, 0, 0, 0, 0, 1, r_z, b_z, g_z, 0)
 	return src
 
 /datum/universal_icon/proc/map_colors_rgba_hex(r_rgba, g_rgba, b_rgba, a_rgba, rgba0="#00000000")
 	if(!transform)
 		transform = new
-	var/rr = iconforge_hex2num(copytext(r_rgba, 2, 4)) / 255
-	var/rg = iconforge_hex2num(copytext(r_rgba, 4, 6)) / 255
-	var/rb = iconforge_hex2num(copytext(r_rgba, 6, 8)) / 255
-	var/ra = iconforge_hex2num(copytext(r_rgba, 8, 10)) / 255
-
-	var/gr = iconforge_hex2num(copytext(g_rgba, 2, 4)) / 255
-	var/gg = iconforge_hex2num(copytext(g_rgba, 4, 6)) / 255
-	var/gb = iconforge_hex2num(copytext(g_rgba, 6, 8)) / 255
-	var/ga = iconforge_hex2num(copytext(g_rgba, 8, 10)) / 255
-
-	var/br = iconforge_hex2num(copytext(b_rgba, 2, 4)) / 255
-	var/bg = iconforge_hex2num(copytext(b_rgba, 4, 6)) / 255
-	var/bb = iconforge_hex2num(copytext(b_rgba, 6, 8)) / 255
-	var/ba = iconforge_hex2num(copytext(b_rgba, 8, 10)) / 255
-
-	var/ar = iconforge_hex2num(copytext(a_rgba, 2, 4)) / 255
-	var/ag = iconforge_hex2num(copytext(a_rgba, 4, 6)) / 255
-	var/ab = iconforge_hex2num(copytext(a_rgba, 6, 8)) / 255
-	var/aa = iconforge_hex2num(copytext(a_rgba, 8, 10)) / 255
-
-	var/r0 = iconforge_hex2num(copytext(rgba0, 2, 4)) / 255
-	var/b0 = iconforge_hex2num(copytext(rgba0, 4, 6)) / 255
-	var/g0 = iconforge_hex2num(copytext(rgba0, 6, 8)) / 255
-	var/a0 = iconforge_hex2num(copytext(rgba0, 8, 10)) / 255
-
-	transform.map_colors(rr, rg, rb, ra, gr, gg, gb, ga, br, bg, bb, ba, ar, ag, ab, aa, r0, b0, g0, a0)
+	iconforge_rgba2hex(r, r_rgba)
+    iconforge_rgba2hex(g, g_rgba)
+    iconforge_rgba2hex(b, b_rgba)
+	iconforge_rgba2hex(a, a_rgba)
+    iconforge_rgba2hex(z, rgba0)
+    transform.map_colors(r_r, g_r, b_r, a_r, r_g, g_g, b_g, a_g, r_b, g_b, b_b, a_b, r_a, g_a, b_a, a_a, r_z, b_z, g_z, a_z)
 	return src
 
 /datum/universal_icon/proc/to_list()
@@ -139,6 +134,8 @@
 /datum/universal_icon/proc/to_json()
 	return json_encode(to_list())
 
+/// Converts the universal icon into a DM icon using BYOND's native icon procs. This is slow.
+/// Check out the to_icon_headless() or iconforge_generate functions.
 /datum/universal_icon/proc/to_icon()
 	var/icon/self = icon(src.icon_file, src.icon_state, dir=src.dir, frame=src.frame)
 	if(istype(src.transform))
@@ -248,3 +245,5 @@
 	return transforms_out
 
 #undef iconforge_hex2num
+#undef iconforge_rgb2hex
+#undef iconforge_rgba2hex
