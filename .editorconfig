@@ -1,14 +1,10 @@
 root = true
 
 [*]
-indent_style = space
-indent_size = 4
+indent_style = tab
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
-
-[*.dm]
-indent_style = tab
 
 [*.yml]
 indent_size = 2
