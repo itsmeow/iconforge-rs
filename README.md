@@ -117,8 +117,8 @@ Parity is covered by tests and checked against BYOND's output as part of CI. Thi
 | **BYOND procs**            |                         |                    |                                                                  |
 | `Scale()`                  | `ICONFORGE_SCALE`       | ⚠️ Partial Parity  | Full parity for some types; excluded for odd sizes (e.g., 8x19). |
 | `Crop()`                   | `ICONFORGE_CROP`        | ✅ Full Parity     | Extensively tested for expansion and shrinking.                  |
-| `Blend() (Icon)`           | `ICONFORGE_BLEND_ICON`  | ✅ Full Parity     | Supports x/y offsets. See Blend Modes below.                     |
-| `Blend() (Color)`          | `ICONFORGE_BLEND_COLOR` | ✅ Full Parity     | See Blend Modes below.                                           |
+| `Blend()` (Icon)           | `ICONFORGE_BLEND_ICON`  | ✅ Full Parity     | Supports x/y offsets. See Blend Modes below.                     |
+| `Blend()` (Color)          | `ICONFORGE_BLEND_COLOR` | ✅ Full Parity     | See Blend Modes below.                                           |
 | `MapColors()`              | `ICONFORGE_MAP_COLORS`  | ✅ Full Parity     | Supports RGB, RGBA (Hex/Num), and Inversion.                     |
 | `Flip()`                   | `ICONFORGE_FLIP`        | ✅ Full Parity     | Tested for all 8 cardinal/ordinal directions.                    |
 | `Turn()`                   | `ICONFORGE_TURN`        | ⚠️ Partial Parity  | Parity for 90° increments only.                                  |
