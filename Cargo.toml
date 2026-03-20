@@ -5,6 +5,7 @@ version = "1.0.0"
 authors = ["itsmeow <itsmeow@itsmeow.dev>"]
 repository = "https://github.com/itsmeow/iconforge-rs"
 license = "MIT"
+readme = "README.md"
 description = "Offloaded icon generation functions for BYOND and SS13"
 rust-version = "1.87"
 

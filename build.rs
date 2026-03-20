@@ -14,11 +14,9 @@ fn main() {
 		return;
 	}
 	let dm_path = Path::new(&target_dir).join("iconforge_rs.dm");
-	let mut f = File::create(&dm_path).expect(&format!(
-		"Couldn't open `{}` for writing iconforge-rs DM headers. Set DM_OUT_DIR to an empty \
+	let mut f = File::create(&dm_path).unwrap_or_else(|_| panic!("Couldn't open `{}` for writing iconforge-rs DM headers. Set DM_OUT_DIR to an empty \
 		 string to disable writing headers or to an absolute path you want to write headers to.",
-		dm_path.display()
-	));
+		dm_path.display()));
 
 	// header
 	writeln!(
