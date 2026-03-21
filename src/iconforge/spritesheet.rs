@@ -1,4 +1,5 @@
 use super::{
+	hash::{fixed_twox_file, fixed_twox_string},
 	icon_operations::apply_all_transforms,
 	image_cache,
 	universal_icon::{Transform, UniversalIcon, UniversalIconData},
@@ -15,11 +16,9 @@ use once_cell::sync::Lazy;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use serde::Serialize;
 use std::{
-	cell::RefCell,
 	collections::{HashMap, HashSet},
 	fs::File,
-	hash::{BuildHasherDefault, Hasher},
-	io::Read,
+	hash::BuildHasherDefault,
 	path::PathBuf,
 	sync::{Arc, Mutex, RwLock},
 };
@@ -43,18 +42,43 @@ pub struct HeadlessResult {
 	pub error: Option<String>,
 }
 
-fn headless_error(error: String, errors: Option<&Vec<String>>) -> HeadlessResult {
+pub enum HeadlessGenerationMode {
+	Png,
+	Dmi { flatten: bool },
+}
+
+pub enum HeadlessGenerationResult {
+	Png {
+		image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+		width: u32,
+		height: u32,
+	},
+	Dmi {
+		icon: Icon,
+		width: u32,
+		height: u32,
+	},
+}
+
+fn join_errors(error: String, errors: Option<&Vec<String>>) -> String {
 	let mut errors_out = error;
 	if let Some(error) = errors
 		&& !error.is_empty()
 	{
 		errors_out = format!("{errors_out} \nAdditional errors: \n{}", error.join("\n"))
 	}
+	errors_out
+}
+
+fn headless_error(file_path: &str, error: String, errors: Option<&Vec<String>>) -> HeadlessResult {
 	HeadlessResult {
 		file_path: None,
 		width: None,
 		height: None,
-		error: Some(errors_out),
+		error: Some(format!(
+			"headless generation for file '{file_path}': {}",
+			join_errors(error, errors)
+		)),
 	}
 }
 
@@ -73,11 +97,12 @@ struct SpritesheetEntry {
 	position: u32,
 }
 
-pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> HeadlessResult {
-	zone!("generate_headless");
+pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> HeadlessResult {
+	zone!("generate_headless_str");
 
 	if file_path.is_empty() {
 		return headless_error(
+			file_path,
 			"Invalid file path: empty paths are not allowed".to_string(),
 			None,
 		);
@@ -85,6 +110,7 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 
 	if file_path.starts_with('/') || file_path.starts_with('\\') || file_path.contains(':') {
 		return headless_error(
+			file_path,
 			format!("Invalid file path: absolute paths are not allowed. Received: '{file_path}'"),
 			None,
 		);
@@ -92,6 +118,7 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 
 	if file_path.contains("../") || file_path.contains("..\\") {
 		return headless_error(
+			file_path,
 			format!(
 				"Invalid file path: parent directory traversal is not allowed. Received: \
 				 '{file_path}'"
@@ -103,6 +130,7 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 	let generate_dmi: bool = file_path.ends_with(".dmi");
 	if !generate_dmi && !file_path.ends_with(".png") {
 		return headless_error(
+			file_path,
 			format!(
 				"Invalid file extension for headless icon. Must be '.dmi' or '.png'. Received: \
 				 '{file_path}'"
@@ -112,12 +140,20 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 	}
 	// PNGs cannot be non-flat
 	let flatten: bool = !generate_dmi || flatten == "1";
+
+	let mode: HeadlessGenerationMode = if generate_dmi {
+		HeadlessGenerationMode::Dmi { flatten }
+	} else {
+		HeadlessGenerationMode::Png
+	};
+
 	let error = Arc::new(Mutex::new(Vec::<String>::new()));
 
 	let sprites_map = match serde_json::from_str::<IndexMap<String, UniversalIcon>>(sprites) {
 		Ok(data) => data,
 		Err(err) => {
 			return headless_error(
+				file_path,
 				format!(
 					"Unable to parse headless sprite data provided for generation of \
 					 '{file_path}': {err}"
@@ -126,6 +162,113 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 			);
 		}
 	};
+
+	let result = match generate_headless(sprites_map, mode) {
+		Ok(result) => result,
+		Err(err) => return headless_error(file_path, err, Some(&error.lock().unwrap())),
+	};
+
+	let path = std::path::Path::new(&file_path);
+	if let Err(err) = std::fs::create_dir_all(path.parent().unwrap()) {
+		return headless_error(
+			file_path,
+			format!(
+				"Error creating output file directories for path '{file_path}' during headless \
+				 generation: {err}"
+			),
+			Some(&error.lock().unwrap()),
+		);
+	};
+	let mut output_file = match File::create(path) {
+		Ok(file) => file,
+		Err(err) => {
+			return headless_error(
+				file_path,
+				format!(
+					"Error creating output file path '{file_path}' during headless generation: \
+					 {err}"
+				),
+				Some(&error.lock().unwrap()),
+			);
+		}
+	};
+
+	let icon_width;
+	let icon_height;
+	match result {
+		HeadlessGenerationResult::Dmi {
+			icon,
+			width,
+			height,
+		} => {
+			icon_width = width;
+			icon_height = height;
+			zone!("headless_write_dmi");
+			{
+				{
+					zone!("headless_save_dmi");
+					if let Err(err) = icon.save(&mut output_file) {
+						return headless_error(
+							file_path,
+							format!(
+								"Error saving DMI for file path '{file_path}' during headless \
+								 generation: {err}"
+							),
+							Some(&error.lock().unwrap()),
+						);
+					}
+				}
+			}
+		}
+		HeadlessGenerationResult::Png {
+			image,
+			width,
+			height,
+		} => {
+			icon_width = width;
+			icon_height = height;
+			zone!("write_headless_png");
+			if let Err(err) = image.save(path) {
+				return headless_error(
+					file_path,
+					format!(
+						"Error saving PNG for file path '{file_path}' during headless generation: \
+						 {err}"
+					),
+					Some(&error.lock().unwrap()),
+				);
+			}
+		}
+	}
+
+	HeadlessResult {
+		file_path: Some(file_path.to_owned()),
+		width: Some(icon_width),
+		height: Some(icon_height),
+		error: {
+			let errors = error.lock().unwrap();
+			if errors.is_empty() {
+				None
+			} else {
+				Some(errors.join("\n"))
+			}
+		},
+	}
+}
+
+pub fn generate_headless(
+	sprites_map: IndexMap<String, UniversalIcon>,
+	mode: HeadlessGenerationMode,
+) -> Result<HeadlessGenerationResult, String> {
+	zone!("generate_headless");
+
+	// PNGs cannot be non-flat
+	let flatten: bool = match mode {
+		HeadlessGenerationMode::Dmi { flatten } => flatten,
+		HeadlessGenerationMode::Png => true,
+	};
+	let error = Arc::new(Mutex::new(Vec::<String>::new()));
+
 	// Pre-load all the DMIs now.
 	// This is much faster than doing it as we go (tested!), because sometimes
 	// multiple parallel iterators need the DMI.
@@ -154,13 +297,13 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 								match apply_all_transforms(image_data, &icon.transform, flatten) {
 									Ok(data) => data,
 									Err(err) => {
-										return headless_error(
+										return Err(join_errors(
 											format!(
-												"Headless image {file_path} state {sprite_name} \
-												 had errors during transformation: {err}"
+												"state {sprite_name} had errors during \
+												 transformation: {err}"
 											),
 											Some(&error.lock().unwrap()),
-										);
+										));
 									}
 								};
 							cache_transformed_images(icon, image_data.clone(), flatten);
@@ -168,32 +311,26 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 						match image_data.images.first() {
 							Some(image) => image.dimensions(),
 							None => {
-								return headless_error(
-									format!(
-										"Headless image {file_path} state {sprite_name} has no \
-										 images!"
-									),
+								return Err(join_errors(
+									format!("state {sprite_name} has no images!"),
 									Some(&error.lock().unwrap()),
-								);
+								));
 							}
 						}
 					}
 					Err(err) => {
-						return headless_error(
-							format!(
-								"Headless image {file_path} state {sprite_name} had errors during \
-								 parsing: {err}"
-							),
+						return Err(join_errors(
+							format!("state {sprite_name} had errors during parsing: {err}"),
 							Some(&error.lock().unwrap()),
-						);
+						));
 					}
 				}
 			}
 			None => {
-				return headless_error(
-					format!("Headless image {file_path} did not contain any sprites!"),
+				return Err(join_errors(
+					String::from("did not contain any sprites!"),
 					Some(&error.lock().unwrap()),
-				);
+				));
 			}
 		};
 	}
@@ -221,9 +358,8 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 									Ok(data) => data,
 									Err(err) => {
 										error.lock().unwrap().push(format!(
-											"Headless image {file_path} state {sprite_name} had \
-											 errors during transformation, skipping this state: \
-											 {err}"
+											"state {sprite_name} had errors during \
+											 transformation, skipping this state: {err}"
 										));
 										return None;
 									}
@@ -234,16 +370,15 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 							Some(image) => image.dimensions(),
 							None => {
 								error.lock().unwrap().push(format!(
-									"Headless image '{file_path}' state {sprite_name} has no \
-									 images, skipping this state!"
+									"state {sprite_name} has no images, skipping this state!"
 								));
 								return None;
 							}
 						};
 						if first_image_size != expected_size {
 							error.lock().unwrap().push(format!(
-								"Headless image '{file_path}' state {sprite_name} does not match \
-								 expected size of {}x{} (got {}x{}), skipping this state",
+								"state {sprite_name} does not match expected size of {}x{} (got \
+								 {}x{}), skipping this state",
 								expected_size.0,
 								expected_size.1,
 								first_image_size.0,
@@ -254,9 +389,8 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 						if flatten && image_data.images.len() > 1 {
 							error.lock().unwrap().push(format!(
 								"More than one image (non-flattened) state {sprite_name} in \
-								 headless spritesheet for file path '{file_path}', skipping this \
-								 state! This shouldn't happen. Please report this bug to \
-								 IconForge."
+								 headless spritesheet, skipping this state! This shouldn't \
+								 happen. Please report this bug to IconForge."
 							));
 							return None;
 						}
@@ -264,8 +398,8 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 					}
 					Err(err) => {
 						error.lock().unwrap().push(format!(
-							"Headless image '{file_path}' state {sprite_name} had errors during \
-							 parsing, skipping this state: {err}"
+							"state {sprite_name} had errors during parsing, skipping this state: \
+							 {err}"
 						));
 						return None;
 					}
@@ -275,7 +409,7 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 					sprite_name.to_owned(),
 					icon,
 					image_data.clone(),
-					if generate_dmi {
+					if matches!(mode, HeadlessGenerationMode::Dmi { flatten: _ }) {
 						Some(image_data.to_iconstate(sprite_name))
 					} else {
 						None
@@ -292,94 +426,40 @@ pub fn generate_headless(file_path: &str, sprites: &str, flatten: &str) -> Headl
 		});
 	}
 
-	if generate_dmi {
-		zone!("headless_write_dmi");
-		{
-			zone!("headless_create_file");
-			let path = std::path::Path::new(&file_path);
-			if let Err(err) = std::fs::create_dir_all(path.parent().unwrap()) {
-				return headless_error(
-					format!(
-						"Error creating output file directories for path '{file_path}' during \
-						 headless generation: {err}"
-					),
-					Some(&error.lock().unwrap()),
-				);
-			};
-			let mut output_file = match File::create(path) {
-				Ok(file) => file,
-				Err(err) => {
-					return headless_error(
-						format!(
-							"Error creating output file path '{file_path}' during headless \
-							 generation: {err}"
-						),
-						Some(&error.lock().unwrap()),
-					);
-				}
-			};
-			{
-				zone!("headless_save_dmi");
-				let dmi_icon = Icon {
-					version: DmiVersion::default(),
-					width: expected_size.0,
-					height: expected_size.1,
-					states: sprites_data
-						.into_iter()
-						.map(|(_, _, _, state)| state.unwrap())
-						.collect::<Vec<IconState>>(),
-				};
-				if let Err(err) = dmi_icon.save(&mut output_file) {
-					return headless_error(
-						format!(
-							"Error saving DMI for file path '{file_path}' during headless \
-							 generation: {err}"
-						),
-						Some(&error.lock().unwrap()),
-					);
-				}
-			}
-		}
-	} else {
-		let mut final_image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
-			RgbaImage::new(expected_size.0 * sprites_data.len() as u32, expected_size.1);
-		for (idx, (_, _, image_data, _)) in sprites_data.into_iter().enumerate() {
-			zone!("headless_join_sprite_png");
-			let image: &RgbaImage = image_data.images.first().unwrap();
-			let base_x: u32 = expected_size.0 * idx as u32;
-			for x in 0..image.width() {
-				for y in 0..image.height() {
-					final_image.put_pixel(base_x + x, y, *image.get_pixel(x, y))
-				}
-			}
-		}
-		{
-			zone!("write_headless_png");
-			if let Err(err) = final_image.save(file_path) {
-				return headless_error(
-					format!(
-						"Error saving PNG for file path '{file_path}' during headless generation: \
-						 {err}"
-					),
-					Some(&error.lock().unwrap()),
-				);
-			}
-		}
-	}
-
-	HeadlessResult {
-		file_path: Some(file_path.to_owned()),
-		width: Some(expected_size.0),
-		height: Some(expected_size.1),
-		error: {
-			let errors = error.lock().unwrap();
-			if errors.is_empty() {
-				None
-			} else {
-				Some(errors.join("\n"))
-			}
+	Ok(match mode {
+		HeadlessGenerationMode::Dmi { flatten: _ } => HeadlessGenerationResult::Dmi {
+			icon: Icon {
+				version: DmiVersion::default(),
+				width: expected_size.0,
+				height: expected_size.1,
+				states: sprites_data
+					.into_iter()
+					.map(|(_, _, _, state)| state.unwrap())
+					.collect::<Vec<IconState>>(),
+			},
+			width: expected_size.0,
+			height: expected_size.1,
 		},
-	}
+		HeadlessGenerationMode::Png => {
+			let mut final_image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
+				RgbaImage::new(expected_size.0 * sprites_data.len() as u32, expected_size.1);
+			for (idx, (_, _, image_data, _)) in sprites_data.into_iter().enumerate() {
+				zone!("headless_join_sprite_png");
+				let image: &RgbaImage = image_data.images.first().unwrap();
+				let base_x: u32 = expected_size.0 * idx as u32;
+				for x in 0..image.width() {
+					for y in 0..image.height() {
+						final_image.put_pixel(base_x + x, y, *image.get_pixel(x, y))
+					}
+				}
+			}
+			HeadlessGenerationResult::Png {
+				image: final_image,
+				width: expected_size.0,
+				height: expected_size.1,
+			}
+		}
+	})
 }
 
 static CREATED_DIRS: Lazy<DashSet<PathBuf>> = Lazy::new(DashSet::new);
@@ -992,34 +1072,4 @@ pub fn cache_valid(
 		result: String::from("1"),
 		fail_reason: String::default(),
 	})?)
-}
-
-const BUFFER_SIZE: usize = 65536;
-// don't allocate another buffer every time we hash a file, just reuse the same
-// buffer.
-thread_local!( static FILE_HASH_BUFFER: RefCell<[u8; BUFFER_SIZE]> = const { RefCell::new([0; BUFFER_SIZE]) } );
-
-/// This seed is just a random number that should stay the same between builds
-/// and runs
-const CONSISTENT_XXHASH_SEED: u64 = 17479268743136991876;
-
-pub fn fixed_twox_file(path: &str) -> Result<String, Error> {
-	let mut hasher = XxHash64::with_seed(CONSISTENT_XXHASH_SEED);
-	let mut file = File::open(path)?;
-	FILE_HASH_BUFFER.with_borrow_mut(|buffer| {
-		loop {
-			let bytes_read = file.read(buffer)?;
-			if bytes_read == 0 {
-				break;
-			}
-			hasher.write(&buffer[..bytes_read]);
-		}
-		Ok(format!("{:x}", hasher.finish()))
-	})
-}
-
-pub fn fixed_twox_string<B: AsRef<[u8]>>(bytes: B) -> String {
-	let mut hasher = XxHash64::with_seed(CONSISTENT_XXHASH_SEED);
-	hasher.write(bytes.as_ref());
-	format!("{:x}", hasher.finish())
 }

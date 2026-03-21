@@ -137,6 +137,28 @@ impl UniversalIconData {
 			.collect()
 	}
 
+	pub fn from_iconstate_ref(icon_state: &IconState) -> UniversalIconData {
+		UniversalIconData {
+			images: icon_state.images.to_owned(),
+			frames: icon_state.frames,
+			dirs: icon_state.dirs,
+			delay: icon_state.delay.to_owned(),
+			loop_flag: icon_state.loop_flag,
+			rewind: icon_state.rewind,
+		}
+	}
+
+	pub fn from_iconstate(icon_state: IconState) -> UniversalIconData {
+		UniversalIconData {
+			images: icon_state.images,
+			frames: icon_state.frames,
+			dirs: icon_state.dirs,
+			delay: icon_state.delay,
+			loop_flag: icon_state.loop_flag,
+			rewind: icon_state.rewind,
+		}
+	}
+
 	pub fn to_iconstate(&self, name: &String) -> IconState {
 		let new_delays = Some(
 			self.delay

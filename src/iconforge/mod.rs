@@ -5,14 +5,24 @@
 pub mod blending;
 /// byond_fn bindings and panic handling
 pub mod byond;
+/// byond_fn bindings and panic handling
+#[cfg(feature = "gags")]
+pub mod byond_gags;
+/// byond_fn bindings and panic handling
+#[cfg(feature = "spritesheet")]
+pub mod byond_spritesheet;
 /// GAGS reimplementation
+#[cfg(feature = "gags")]
 pub mod gags;
+/// internal hash functions
+mod hash;
 /// Contains utility functions for transforming images/icons such as crops,
 /// scales, blending
 pub mod icon_operations;
 /// Caching for DMI and UniversalIcon image data
 pub mod image_cache;
 /// Spritesheet generation and cache validation functions
+#[cfg(feature = "spritesheet")]
 pub mod spritesheet;
 /// UniversalIcon data structure and utilities
 pub mod universal_icon;

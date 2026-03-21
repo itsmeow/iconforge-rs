@@ -1,7 +1,8 @@
 use std::{fs::File, io::Read, path::Path};
 
 use clap::{Parser, Subcommand};
-use iconforge_rs::iconforge::spritesheet::{generate_headless, generate_spritesheet};
+#[cfg(feature = "spritesheet")]
+use iconforge_rs::iconforge::spritesheet::{generate_headless_str, generate_spritesheet};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -12,6 +13,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+	#[cfg(feature = "spritesheet")]
 	Generate {
 		#[arg(long)]
 		file_path: String,
@@ -26,6 +28,7 @@ enum Commands {
 		#[arg(long)]
 		flatten: bool,
 	},
+	#[cfg(feature = "spritesheet")]
 	GenerateHeadless {
 		#[arg(long)]
 		file_path: String,
@@ -40,6 +43,7 @@ fn main() {
 	let cli = Cli::parse();
 
 	match &cli.command {
+		#[cfg(feature = "spritesheet")]
 		Some(Commands::Generate {
 			file_path,
 			spritesheet_name,
@@ -80,6 +84,7 @@ fn main() {
 				serde_json::to_string_pretty(&result_json).unwrap()
 			);
 		}
+		#[cfg(feature = "spritesheet")]
 		Some(Commands::GenerateHeadless {
 			file_path,
 			sprites_json_path,
@@ -98,7 +103,7 @@ fn main() {
 				eprintln!("Failed to read sprites_json_path: {e:#?}");
 				return;
 			}
-			let result = generate_headless(
+			let result = generate_headless_str(
 				file_path,
 				&sprites_json_txt,
 				if *flatten { "1" } else { "0" },
@@ -114,6 +119,8 @@ fn main() {
 				eprintln!("Errors during generate_headless: {e}");
 			}
 		}
+		#[cfg(not(feature = "spritesheet"))]
+		&Some(_) => todo!(),
 		None => {}
 	}
 }

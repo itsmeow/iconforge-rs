@@ -18,6 +18,11 @@ crate-type = ["cdylib", "lib"]
 name = "iconforge_rs_cli"
 path = "src/cli/main.rs"
 
+[features]
+default = ["spritesheet", "gags"]
+spritesheet = []
+gags = []
+
 [profile.release]
 opt-level = 3
 codegen-units = 1

@@ -105,11 +105,14 @@ pub fn load_gags_config(
 	let icon_data = filepath_to_dmi(config_icon_path).map_err(Error::IconForge)?;
 	{
 		zone!("gags_insert_config");
-		GAGS_CACHE.insert(config_path.to_owned(), GAGSData {
-			config: gags_config,
-			config_path: config_path.to_owned(),
-			config_icon: icon_data,
-		});
+		GAGS_CACHE.insert(
+			config_path.to_owned(),
+			GAGSData {
+				config: gags_config,
+				config_path: config_path.to_owned(),
+				config_icon: icon_data,
+			},
+		);
 	}
 	Ok(String::from("OK"))
 }
