@@ -4,13 +4,8 @@
 /// RGBA blending functions
 pub mod blending;
 /// byond_fn bindings and panic handling
-pub mod byond;
-/// byond_fn bindings and panic handling
-#[cfg(feature = "gags")]
-pub mod byond_gags;
-/// byond_fn bindings and panic handling
-#[cfg(feature = "spritesheet")]
-pub mod byond_spritesheet;
+#[cfg(feature = "ffi")]
+pub mod ffi;
 /// GAGS reimplementation
 #[cfg(feature = "gags")]
 pub mod gags;

@@ -22,6 +22,7 @@ path = "src/cli/main.rs"
 default = ["spritesheet", "gags"]
 spritesheet = []
 gags = []
+ffi = []
 
 [profile.release]
 opt-level = 3

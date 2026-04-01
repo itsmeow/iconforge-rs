@@ -11,11 +11,11 @@ Install [Rust](https://rustup.rs/) via rustup.
 Create a release build:
 
 ```sh
-cargo build --release --target i686-pc-windows-msvc
+cargo build --features spritesheet,gags,ffi --release --target i686-pc-windows-msvc
 ```
 
 ```sh
-cargo build --release --target i686-unknown-linux-gnu
+cargo build --features spritesheet,gags,ffi --release --target i686-unknown-linux-gnu
 ```
 
 ### Build Optimization

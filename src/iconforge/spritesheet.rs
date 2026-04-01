@@ -35,11 +35,26 @@ static SPRITES_TO_JSON: Lazy<Arc<Mutex<SpriteJsonMap>>> = Lazy::new(|| {
 });
 
 #[derive(Serialize)]
-pub struct HeadlessResult {
+pub struct SpritesheetResult {
 	pub file_path: Option<String>,
 	pub width: Option<u32>,
 	pub height: Option<u32>,
 	pub error: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct MultisizeSpritesheetResult {
+	pub sizes: Vec<String>,
+	pub sprites: HashMap<String, SpritesheetEntry>,
+	pub dmi_hashes: HashMap<String, String>,
+	pub sprites_hash: String,
+	pub error: String,
+}
+
+#[derive(Serialize, Clone)]
+pub struct SpritesheetEntry {
+	pub size_id: String,
+	pub position: u32,
 }
 
 pub enum SpritesheetGenerationMode {
@@ -70,8 +85,12 @@ fn join_errors(error: String, errors: Option<&Vec<String>>) -> String {
 	errors_out
 }
 
-fn headless_error(file_path: &str, error: String, errors: Option<&Vec<String>>) -> HeadlessResult {
-	HeadlessResult {
+fn spritesheet_result_error(
+	file_path: &str,
+	error: String,
+	errors: Option<&Vec<String>>,
+) -> SpritesheetResult {
+	SpritesheetResult {
 		file_path: None,
 		width: None,
 		height: None,
@@ -82,26 +101,15 @@ fn headless_error(file_path: &str, error: String, errors: Option<&Vec<String>>) 
 	}
 }
 
-#[derive(Serialize)]
-struct SpritesheetResult {
-	sizes: Vec<String>,
-	sprites: HashMap<String, SpritesheetEntry>,
-	dmi_hashes: HashMap<String, String>,
-	sprites_hash: String,
-	error: String,
-}
-
-#[derive(Serialize, Clone)]
-pub struct SpritesheetEntry {
-	pub size_id: String,
-	pub position: u32,
-}
-
-pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> HeadlessResult {
+pub fn spritesheet_from_universal_icons_str(
+	file_path: &str,
+	sprites: &str,
+	flatten: &str,
+) -> SpritesheetResult {
 	zone!("generate_headless_str");
 
 	if file_path.is_empty() {
-		return headless_error(
+		return spritesheet_result_error(
 			file_path,
 			"Invalid file path: empty paths are not allowed".to_string(),
 			None,
@@ -109,7 +117,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	}
 
 	if file_path.starts_with('/') || file_path.starts_with('\\') || file_path.contains(':') {
-		return headless_error(
+		return spritesheet_result_error(
 			file_path,
 			format!("Invalid file path: absolute paths are not allowed. Received: '{file_path}'"),
 			None,
@@ -117,7 +125,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	}
 
 	if file_path.contains("../") || file_path.contains("..\\") {
-		return headless_error(
+		return spritesheet_result_error(
 			file_path,
 			format!(
 				"Invalid file path: parent directory traversal is not allowed. Received: \
@@ -129,7 +137,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 
 	let generate_dmi: bool = file_path.ends_with(".dmi");
 	if !generate_dmi && !file_path.ends_with(".png") {
-		return headless_error(
+		return spritesheet_result_error(
 			file_path,
 			format!(
 				"Invalid file extension for headless icon. Must be '.dmi' or '.png'. Received: \
@@ -152,7 +160,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	let sprites_map = match serde_json::from_str::<IndexMap<String, UniversalIcon>>(sprites) {
 		Ok(data) => data,
 		Err(err) => {
-			return headless_error(
+			return spritesheet_result_error(
 				file_path,
 				format!(
 					"Unable to parse headless sprite data provided for generation of \
@@ -163,14 +171,14 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 		}
 	};
 
-	let result = match generate_headless(sprites_map, mode) {
+	let result = match spritesheet_from_universal_icons(sprites_map, mode) {
 		Ok(result) => result,
-		Err(err) => return headless_error(file_path, err, Some(&error.lock().unwrap())),
+		Err(err) => return spritesheet_result_error(file_path, err, Some(&error.lock().unwrap())),
 	};
 
 	let path = std::path::Path::new(&file_path);
 	if let Err(err) = std::fs::create_dir_all(path.parent().unwrap()) {
-		return headless_error(
+		return spritesheet_result_error(
 			file_path,
 			format!(
 				"Error creating output file directories for path '{file_path}' during headless \
@@ -182,7 +190,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	let mut output_file = match File::create(path) {
 		Ok(file) => file,
 		Err(err) => {
-			return headless_error(
+			return spritesheet_result_error(
 				file_path,
 				format!(
 					"Error creating output file path '{file_path}' during headless generation: \
@@ -208,7 +216,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 				{
 					zone!("headless_save_dmi");
 					if let Err(err) = icon.save(&mut output_file) {
-						return headless_error(
+						return spritesheet_result_error(
 							file_path,
 							format!(
 								"Error saving DMI for file path '{file_path}' during headless \
@@ -229,7 +237,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 			icon_height = height;
 			zone!("write_headless_png");
 			if let Err(err) = image.save(path) {
-				return headless_error(
+				return spritesheet_result_error(
 					file_path,
 					format!(
 						"Error saving PNG for file path '{file_path}' during headless generation: \
@@ -241,7 +249,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 		}
 	}
 
-	HeadlessResult {
+	SpritesheetResult {
 		file_path: Some(file_path.to_owned()),
 		width: Some(icon_width),
 		height: Some(icon_height),
@@ -256,8 +264,8 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	}
 }
 
-pub fn generate_headless(
-	sprites_map: IndexMap<String, UniversalIcon>,
+pub fn spritesheet_from_universal_icons(
+	icon_states: IndexMap<String, UniversalIcon>,
 	mode: SpritesheetGenerationMode,
 ) -> Result<SpritesheetImage, String> {
 	zone!("generate_headless");
@@ -272,7 +280,7 @@ pub fn generate_headless(
 	// Pre-load all the DMIs now.
 	// This is much faster than doing it as we go (tested!), because sometimes
 	// multiple parallel iterators need the DMI.
-	sprites_map.par_iter().for_each(|(_, icon)| {
+	icon_states.par_iter().for_each(|(_, icon)| {
 		zone!("headless_preload_dmis");
 
 		icon.get_nested_icons(true)
@@ -287,7 +295,7 @@ pub fn generate_headless(
 	let expected_size: (u32, u32);
 	{
 		zone!("headless_get_size");
-		expected_size = match sprites_map.first() {
+		expected_size = match icon_states.first() {
 			Some((sprite_name, icon)) => {
 				match icon.get_image_data(sprite_name, true, false, flatten) {
 					Ok((image_data, cached)) => {
@@ -344,7 +352,7 @@ pub fn generate_headless(
 	)>;
 	{
 		zone!("headless_generate_all_states");
-		sprites_data = sprites_map
+		sprites_data = icon_states
 			.par_iter()
 			.filter_map(|(sprite_name, icon)| {
 				zone!("headless_generate_state");
@@ -422,7 +430,7 @@ pub fn generate_headless(
 	{
 		zone!("headless_sort_sprites");
 		sprites_data.sort_unstable_by_key(|(sprite_name, _, _, _)| {
-			sprites_map.get_index_of(sprite_name).unwrap_or(1000)
+			icon_states.get_index_of(sprite_name).unwrap_or(1000)
 		});
 	}
 
@@ -476,7 +484,7 @@ fn ensure_dir_exists(path: PathBuf, error: &Arc<Mutex<Vec<String>>>) {
 	}
 }
 
-pub fn generate_multisize_spritesheet_str(
+pub fn spritesheet_multisize_from_universal_icons_str(
 	file_path: &str,
 	spritesheet_name: &str,
 	sprites: &str,
@@ -511,7 +519,14 @@ pub fn generate_multisize_spritesheet_str(
 		}
 	};
 
-	let result = generate_multisize_spritesheet(sprites_map, mode, true, true, hash_icons, false)?;
+	let result = spritesheet_multisize_from_universal_icons(
+		sprites_map,
+		mode,
+		true,
+		true,
+		hash_icons,
+		false,
+	)?;
 
 	let game_meta = match result.game_meta {
 		Some(meta) => meta,
@@ -602,7 +617,7 @@ pub fn generate_multisize_spritesheet_str(
 	});
 
 	// Collect the game metadata and any errors.
-	let returned = SpritesheetResult {
+	let returned = MultisizeSpritesheetResult {
 		sizes: game_meta.sizes,
 		sprites: game_meta.sprites,
 		dmi_hashes: if let Some(cache) = result.cache_meta {
@@ -613,7 +628,9 @@ pub fn generate_multisize_spritesheet_str(
 		sprites_hash,
 		error: error.lock().unwrap().join("\n"),
 	};
-	Ok(serde_json::to_string::<SpritesheetResult>(&returned)?)
+	Ok(serde_json::to_string::<MultisizeSpritesheetResult>(
+		&returned,
+	)?)
 }
 
 pub struct MultisizeSpritesheetGameMetadata {
@@ -643,7 +660,7 @@ pub struct MultisizeSpritesheet {
 
 static TREE_GEN_NOTICE: Lazy<String> = Lazy::new(|| String::from("N/A, in tree generation stage"));
 
-pub fn generate_multisize_spritesheet(
+pub fn spritesheet_multisize_from_universal_icons(
 	sprites: IndexMap<String, UniversalIcon>,
 	mode: SpritesheetGenerationMode,
 	generate_game_meta: bool,

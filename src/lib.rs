@@ -6,8 +6,10 @@
 )] // see https://github.com/rust-lang/rust-clippy/issues/13422
 
 #[macro_use]
+#[cfg(feature = "ffi")]
 mod byond;
 mod error;
+#[cfg(feature = "ffi")]
 mod jobs;
 
 pub mod iconforge;

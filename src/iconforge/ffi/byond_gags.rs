@@ -1,5 +1,4 @@
-use super::gags;
-use crate::{byond::catch_panic, jobs};
+use crate::{byond::catch_panic, iconforge::gags, jobs};
 use tracy_full::frame;
 
 byond_fn!(fn iconforge_load_gags_config(config_path, config_json, config_icon_path) {

@@ -17,3 +17,10 @@ byond_fn!(
 		Some("Ok")
 	}
 );
+
+/// byond_fn bindings and panic handling
+#[cfg(feature = "gags")]
+pub mod byond_gags;
+/// byond_fn bindings and panic handling
+#[cfg(feature = "spritesheet")]
+pub mod byond_spritesheet;
