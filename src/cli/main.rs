@@ -2,7 +2,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use clap::{Parser, Subcommand};
 #[cfg(feature = "spritesheet")]
-use iconforge_rs::iconforge::spritesheet::{
+use iconforge::core::spritesheet::{
 	spritesheet_from_universal_icons_str, spritesheet_multisize_from_universal_icons_str,
 };
 

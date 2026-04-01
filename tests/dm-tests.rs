@@ -55,7 +55,7 @@ fn compile_and_run_dme(name: &str, iconforge_rs_lib_path: &str, chdir: Option<&s
 		.arg("-trusted")
 		.arg("-cd")
 		.arg(chdir.unwrap_or("."))
-		.env("ICONFORGE_RS", iconforge_rs_lib_path)
+		.env("ICONFORGE", iconforge_rs_lib_path)
 		.output()
 		.unwrap();
 
@@ -72,10 +72,10 @@ fn compile_and_run_dme(name: &str, iconforge_rs_lib_path: &str, chdir: Option<&s
 }
 
 /**
- * Find the iconforge_rs binary and DMSRC and copy them into the test run
+ * Find the iconforge binary and DMSRC and copy them into the test run
  * directory
  */
-fn find_and_copy_iconforge_rs_lib() -> (String, &'static str, &'static str) {
+fn find_and_copy_iconforge_lib() -> (String, &'static str, &'static str) {
 	let target_dir = if cfg!(target_os = "linux") {
 		"i686-unknown-linux-gnu"
 	} else {
@@ -87,28 +87,28 @@ fn find_and_copy_iconforge_rs_lib() -> (String, &'static str, &'static str) {
 		"release"
 	};
 	let iconforge_rs_lib_fname = if cfg!(target_os = "linux") {
-		"libiconforge_rs.so"
+		"libiconforge.so"
 	} else {
-		"iconforge_rs.dll"
+		"iconforge.dll"
 	};
 	let iconforge_rs_lib_source_path =
 		format!("target/{target_dir}/{profile}/{iconforge_rs_lib_fname}");
-	println!("Source ICONFORGE_RS path: {iconforge_rs_lib_source_path}");
+	println!("Source ICONFORGE path: {iconforge_rs_lib_source_path}");
 	match fs::exists(Path::new(&iconforge_rs_lib_source_path)) {
 		Ok(exists) => {
 			if !exists {
 				panic!(
-					"Source ICONFORGE_RS path does not exist! Try rebuilding the project with the \
+					"Source ICONFORGE path does not exist! Try rebuilding the project with the \
 					 corresponding target and debug or release mode."
 				)
 			}
 		}
-		Err(err) => panic!("Error accessing source iconforge_rs path! {err}"),
+		Err(err) => panic!("Error accessing source iconforge path! {err}"),
 	}
 	let iconforge_rs_lib_path = format!("tests/dm/{iconforge_rs_lib_fname}");
 	let _ = fs::copy(&iconforge_rs_lib_source_path, &iconforge_rs_lib_path);
-	let iconforge_rs_dm_path = "tests/dm/iconforge_rs.dm";
-	let _ = fs::copy("target/iconforge_rs.dm", iconforge_rs_dm_path);
+	let iconforge_rs_dm_path = "tests/dm/iconforge.dm";
+	let _ = fs::copy("target/iconforge.dm", iconforge_rs_dm_path);
 	(
 		iconforge_rs_lib_path,
 		iconforge_rs_lib_fname,
@@ -118,7 +118,7 @@ fn find_and_copy_iconforge_rs_lib() -> (String, &'static str, &'static str) {
 
 fn run_dm_tests(name: &str, use_repo_root: bool) {
 	let (iconforge_rs_lib_path, iconforge_rs_lib_fname, iconforge_rs_dm_path) =
-		find_and_copy_iconforge_rs_lib();
+		find_and_copy_iconforge_lib();
 
 	let output = compile_and_run_dme(
 		name,

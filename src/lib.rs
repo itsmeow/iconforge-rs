@@ -12,4 +12,4 @@ mod error;
 #[cfg(feature = "ffi")]
 mod jobs;
 
-pub mod iconforge;
+pub mod core;

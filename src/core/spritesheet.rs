@@ -5,8 +5,8 @@ use super::{
 	universal_icon::{Transform, UniversalIcon, UniversalIconData},
 };
 use crate::{
+	core::image_cache::{ICON_ROOT, cache_transformed_images},
 	error::Error,
-	iconforge::image_cache::{ICON_ROOT, cache_transformed_images},
 };
 use dashmap::{DashMap, DashSet};
 use dmi::icon::{DmiVersion, Icon, IconState};

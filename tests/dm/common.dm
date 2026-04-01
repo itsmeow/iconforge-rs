@@ -1,5 +1,5 @@
-#define ICONFORGE_RS world.GetConfig("env", "ICONFORGE_RS")
-#include "iconforge_rs.dm"
+#define ICONFORGE world.GetConfig("env", "ICONFORGE")
+#include "iconforge.dm"
 
 /world/New()
     for(var/func in typesof(/test/proc))

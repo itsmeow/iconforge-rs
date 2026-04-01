@@ -1,5 +1,5 @@
 [package]
-name = "iconforge_rs"
+name = "iconforge"
 edition = "2024"
 version = "1.0.0"
 authors = ["itsmeow <itsmeow@itsmeow.dev>"]
@@ -10,12 +10,12 @@ description = "Offloaded icon generation functions for BYOND and SS13"
 rust-version = "1.87"
 
 [lib]
-name = "iconforge_rs"
+name = "iconforge"
 path = "src/lib.rs"
-crate-type = ["cdylib", "lib"]
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "iconforge_rs_cli"
+name = "iconforge_cli"
 path = "src/cli/main.rs"
 
 [features]

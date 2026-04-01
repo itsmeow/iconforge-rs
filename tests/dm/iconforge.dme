@@ -388,11 +388,11 @@
 		var/entries_json = job_data["entries_json"]
 		var/expected_size = job_data["expected_size"]
 		var/result = iconforge_check(job)
-		if(result == ICONFORGE_RS_JOB_NO_RESULTS_YET)
+		if(result == ICONFORGE_JOB_NO_RESULTS_YET)
 			return FALSE
 		if(!findtext(result, "{", 1, 2))
 			text2file(entries_json, "tmp/iconforge_panic_data.json")
-			world.log << "runtime error: iconforge_rs PANICKED while generating sheet described by tmp/iconforge_panic_data.json with error: [result]"
+			world.log << "runtime error: iconforge PANICKED while generating sheet described by tmp/iconforge_panic_data.json with error: [result]"
 			job_ids -= job
 			continue
 		var/output_decode = json_decode(result)

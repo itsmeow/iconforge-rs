@@ -43,9 +43,9 @@
 ///     "error" = "[A string, empty if there were no errors.]"
 /// )
 /// In the case of an unrecoverable panic from within Rust, this function ONLY returns a string containing the error.
-#define iconforge_generate(file_path, spritesheet_name, sprites, hash_icons, generate_dmi, flatten) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_generate")(file_path, spritesheet_name, sprites, "[hash_icons]", "[generate_dmi]", "[flatten]")
+#define iconforge_generate(file_path, spritesheet_name, sprites, hash_icons, generate_dmi, flatten) ICONFORGE_CALL(ICONFORGE, "iconforge_generate")(file_path, spritesheet_name, sprites, "[hash_icons]", "[generate_dmi]", "[flatten]")
 /// Returns a job_id for use with iconforge_check()
-#define iconforge_generate_async(file_path, spritesheet_name, sprites, hash_icons, generate_dmi, flatten) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_generate_async")(file_path, spritesheet_name, sprites, "[hash_icons]", "[generate_dmi]", "[flatten]")
+#define iconforge_generate_async(file_path, spritesheet_name, sprites, hash_icons, generate_dmi, flatten) ICONFORGE_CALL(ICONFORGE, "iconforge_generate_async")(file_path, spritesheet_name, sprites, "[hash_icons]", "[generate_dmi]", "[flatten]")
 /// Creates a single DMI or PNG using 'sprites' as a list of icon states / images.
 /// This function is intended for generating icons with only a few states that have little in common with each other, and only one size.
 /// For icons with a large number of states, potentially variable sizes, that re-use sets of transforms more than once, or that benefit from caching, use iconforge_generate.
@@ -60,12 +60,12 @@
 ///     "height" = 32 // the height, which is determined by the first entry of 'sprites', null if there was a fatal error
 ///     "error" = "[A string, null if there were no errors.]"
 /// )
-#define iconforge_generate_headless(file_path, sprites, flatten) json_decode(ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_generate_headless")(file_path, sprites, "[flatten]"))
-/// Returns the status of an async job_id, or its result if it is completed. See ICONFORGE_RS_JOB DEFINEs.
-#define iconforge_check(job_id) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_check")("[job_id]")
+#define iconforge_generate_headless(file_path, sprites, flatten) json_decode(ICONFORGE_CALL(ICONFORGE, "iconforge_generate_headless")(file_path, sprites, "[flatten]"))
+/// Returns the status of an async job_id, or its result if it is completed. See ICONFORGE_JOB DEFINEs.
+#define iconforge_check(job_id) ICONFORGE_CALL(ICONFORGE, "iconforge_check")("[job_id]")
 /// Clears all cached DMIs and images, freeing up memory.
 /// This should be used after spritesheets are done being generated.
-#define iconforge_cleanup ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_cleanup")
+#define iconforge_cleanup ICONFORGE_CALL(ICONFORGE, "iconforge_cleanup")
 /// Takes in a set of hashes, generate inputs, and DMI filepaths, and compares them to determine cache validity.
 /// input_hash: xxh64 hash of "sprites" from the cache.
 /// dmi_hashes: xxh64 hashes of the DMIs in a spritesheet, given by `iconforge_generate` with `hash_icons` enabled. From the cache.
@@ -75,23 +75,23 @@
 ///     "fail_reason": "" (empty string if valid, otherwise a string containing the invalidation reason or an error with ERROR: prefixed.)
 /// )
 /// In the case of an unrecoverable panic from within Rust, this function ONLY returns a string containing the error.
-#define iconforge_cache_valid(input_hash, dmi_hashes, sprites) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_cache_valid")(input_hash, dmi_hashes, sprites)
+#define iconforge_cache_valid(input_hash, dmi_hashes, sprites) ICONFORGE_CALL(ICONFORGE, "iconforge_cache_valid")(input_hash, dmi_hashes, sprites)
 /// Returns a job_id for use with iconforge_check()
-#define iconforge_cache_valid_async(input_hash, dmi_hashes, sprites) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_cache_valid_async")(input_hash, dmi_hashes, sprites)
+#define iconforge_cache_valid_async(input_hash, dmi_hashes, sprites) ICONFORGE_CALL(ICONFORGE, "iconforge_cache_valid_async")(input_hash, dmi_hashes, sprites)
 /// Provided a /datum/greyscale_config typepath, JSON string containing the greyscale config, and path to a DMI file containing the base icons,
 /// Loads that config into memory for later use by iconforge_gags(). The config_path is the unique identifier used later.
 /// JSON Config schema: https://hackmd.io/@tgstation/GAGS-Layer-Types
 /// Adding dirs or frames (via blending larger icons) to icons with more than 1 dir or 1 frame is not supported.
 /// Returns "OK" if successful, otherwise, returns a string containing the error.
-#define iconforge_load_gags_config(config_path, config_json, config_icon_path) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_load_gags_config")("[config_path]", config_json, config_icon_path)
+#define iconforge_load_gags_config(config_path, config_json, config_icon_path) ICONFORGE_CALL(ICONFORGE, "iconforge_load_gags_config")("[config_path]", config_json, config_icon_path)
 /// Given a config_path (previously loaded by iconforge_load_gags_config), and a string of hex colors formatted as "#ff00ff#ffaa00"
 /// Outputs a DMI containing all of the states within the config JSON to output_dmi_path, creating any directories leading up to it if necessary.
 /// Returns "OK" if successful, otherwise, returns a string containing the error.
-#define iconforge_gags(config_path, colors, output_dmi_path) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_gags")("[config_path]", colors, output_dmi_path)
+#define iconforge_gags(config_path, colors, output_dmi_path) ICONFORGE_CALL(ICONFORGE, "iconforge_gags")("[config_path]", colors, output_dmi_path)
 /// Returns a job_id for use with iconforge_check()
-#define iconforge_load_gags_config_async(config_path, config_json, config_icon_path) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_load_gags_config_async")("[config_path]", config_json, config_icon_path)
+#define iconforge_load_gags_config_async(config_path, config_json, config_icon_path) ICONFORGE_CALL(ICONFORGE, "iconforge_load_gags_config_async")("[config_path]", config_json, config_icon_path)
 /// Returns a job_id for use with iconforge_check()
-#define iconforge_gags_async(config_path, colors, output_dmi_path) ICONFORGE_RS_CALL(ICONFORGE_RS, "iconforge_gags_async")("[config_path]", colors, output_dmi_path)
+#define iconforge_gags_async(config_path, colors, output_dmi_path) ICONFORGE_CALL(ICONFORGE, "iconforge_gags_async")("[config_path]", colors, output_dmi_path)
 
 #define ICONFORGE_BLEND_COLOR "BlendColor"
 #define ICONFORGE_BLEND_ICON "BlendIcon"

@@ -36,18 +36,18 @@ Public release binaries of IconForge do *not* use native CPU optimizations, so b
 
 ## Installation
 
-To install IconForge to a BYOND repository, copy `target/iconforge_rs.dm` into an early stage of your .dme, so that it can create `#define`s for later files. Place the remaining files wherever makes sense for your repository.
+To install IconForge to a BYOND repository, copy `target/iconforge.dm` into an early stage of your .dme, so that it can create `#define`s for later files. Place the remaining files wherever makes sense for your repository.
 
-`iconforge_rs.dm` function calls will search for a corresponding native library (`.dll` or `.so`) in the following locations:
+`iconforge.dm` function calls will search for a corresponding native library (`.dll` or `.so`) in the following locations:
 
 - In the repository / game root of your BYOND application.
 - In `$HOME/.byond/bin/` (only on Linux)
 
 It expects the filename of the native library to be any of the following:
 
-- Windows: `iconforge_rs.dll` (or `iconforge_rs64.dll`, for 64-bit BYOND implementations such as [OpenDream](https://github.com/OpenDreamProject/OpenDream))
-- Linux: `libiconforge_rs.so` (or `libiconforge_rs64.so`)
-- Linux (Legacy, do not use): `iconforge_rs` (or `iconforge_rs64`)
+- Windows: `iconforge.dll` (or `iconforge64.dll`, for 64-bit BYOND implementations such as [OpenDream](https://github.com/OpenDreamProject/OpenDream))
+- Linux: `libiconforge.so` (or `libiconforge64.so`)
+- Linux (Legacy, do not use): `iconforge` (or `iconforge64`)
 
 ## Features
 

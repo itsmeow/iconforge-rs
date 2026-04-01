@@ -1,4 +1,4 @@
-//! Buildscript which will save a `iconforge_rs.dm` with the DLL's public API.
+//! Buildscript which will save a `iconforge.dm` with the DLL's public API.
 
 use std::{env, fs::File, io::Write, path::Path};
 
@@ -13,11 +13,12 @@ fn main() {
 	if target_dir.trim().is_empty() {
 		return;
 	}
-	let dm_path = Path::new(&target_dir).join("iconforge_rs.dm");
+	let dm_path = Path::new(&target_dir).join("iconforge.dm");
 	let mut f = File::create(&dm_path).unwrap_or_else(|_| {
 		panic!(
 			"Couldn't open `{}` for writing iconforge-rs DM headers. Set DM_OUT_DIR to an empty \
-		 string to disable writing headers or to an absolute path you want to write headers to.",
+			 string to disable writing headers or to an absolute path you want to write headers \
+			 to.",
 			dm_path.display()
 		)
 	});

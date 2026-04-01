@@ -8,4 +8,4 @@ tests/dm/*.rsc
 tests/dm/tmp/
 tests/dm/*.dll
 tests/dm/*.so
-tests/dm/iconforge_rs.dm
+tests/dm/iconforge.dm
