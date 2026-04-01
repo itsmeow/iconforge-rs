@@ -2,7 +2,9 @@ use std::{fs::File, io::Read, path::Path};
 
 use clap::{Parser, Subcommand};
 #[cfg(feature = "spritesheet")]
-use iconforge_rs::iconforge::spritesheet::{generate_headless_str, generate_spritesheet};
+use iconforge_rs::iconforge::spritesheet::{
+	generate_headless_str, generate_multisize_spritesheet_str,
+};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -65,7 +67,7 @@ fn main() {
 				eprintln!("Failed to read sprites_json_path: {e:#?}");
 				return;
 			}
-			let result_json = match generate_spritesheet(
+			let result_json = match generate_multisize_spritesheet_str(
 				file_path,
 				spritesheet_name,
 				&sprites_json_txt,

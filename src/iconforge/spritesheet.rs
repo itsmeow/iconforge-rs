@@ -18,7 +18,7 @@ use serde::Serialize;
 use std::{
 	collections::{HashMap, HashSet},
 	fs::File,
-	hash::BuildHasherDefault,
+	hash::{BuildHasherDefault, Hash, Hasher},
 	path::PathBuf,
 	sync::{Arc, Mutex, RwLock},
 };
@@ -42,12 +42,12 @@ pub struct HeadlessResult {
 	pub error: Option<String>,
 }
 
-pub enum HeadlessGenerationMode {
+pub enum SpritesheetGenerationMode {
 	Png,
 	Dmi { flatten: bool },
 }
 
-pub enum HeadlessGenerationResult {
+pub enum SpritesheetImage {
 	Png {
 		image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
 		width: u32,
@@ -85,16 +85,16 @@ fn headless_error(file_path: &str, error: String, errors: Option<&Vec<String>>) 
 #[derive(Serialize)]
 struct SpritesheetResult {
 	sizes: Vec<String>,
-	sprites: DashMap<String, SpritesheetEntry, BuildHasherDefault<XxHash64>>,
-	dmi_hashes: DashMap<String, String>,
+	sprites: HashMap<String, SpritesheetEntry>,
+	dmi_hashes: HashMap<String, String>,
 	sprites_hash: String,
 	error: String,
 }
 
 #[derive(Serialize, Clone)]
-struct SpritesheetEntry {
-	size_id: String,
-	position: u32,
+pub struct SpritesheetEntry {
+	pub size_id: String,
+	pub position: u32,
 }
 
 pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> HeadlessResult {
@@ -141,10 +141,10 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	// PNGs cannot be non-flat
 	let flatten: bool = !generate_dmi || flatten == "1";
 
-	let mode: HeadlessGenerationMode = if generate_dmi {
-		HeadlessGenerationMode::Dmi { flatten }
+	let mode: SpritesheetGenerationMode = if generate_dmi {
+		SpritesheetGenerationMode::Dmi { flatten }
 	} else {
-		HeadlessGenerationMode::Png
+		SpritesheetGenerationMode::Png
 	};
 
 	let error = Arc::new(Mutex::new(Vec::<String>::new()));
@@ -196,7 +196,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 	let icon_width;
 	let icon_height;
 	match result {
-		HeadlessGenerationResult::Dmi {
+		SpritesheetImage::Dmi {
 			icon,
 			width,
 			height,
@@ -220,7 +220,7 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 				}
 			}
 		}
-		HeadlessGenerationResult::Png {
+		SpritesheetImage::Png {
 			image,
 			width,
 			height,
@@ -258,14 +258,14 @@ pub fn generate_headless_str(file_path: &str, sprites: &str, flatten: &str) -> H
 
 pub fn generate_headless(
 	sprites_map: IndexMap<String, UniversalIcon>,
-	mode: HeadlessGenerationMode,
-) -> Result<HeadlessGenerationResult, String> {
+	mode: SpritesheetGenerationMode,
+) -> Result<SpritesheetImage, String> {
 	zone!("generate_headless");
 
 	// PNGs cannot be non-flat
 	let flatten: bool = match mode {
-		HeadlessGenerationMode::Dmi { flatten } => flatten,
-		HeadlessGenerationMode::Png => true,
+		SpritesheetGenerationMode::Dmi { flatten } => flatten,
+		SpritesheetGenerationMode::Png => true,
 	};
 	let error = Arc::new(Mutex::new(Vec::<String>::new()));
 
@@ -409,7 +409,7 @@ pub fn generate_headless(
 					sprite_name.to_owned(),
 					icon,
 					image_data.clone(),
-					if matches!(mode, HeadlessGenerationMode::Dmi { flatten: _ }) {
+					if matches!(mode, SpritesheetGenerationMode::Dmi { flatten: _ }) {
 						Some(image_data.to_iconstate(sprite_name))
 					} else {
 						None
@@ -427,7 +427,7 @@ pub fn generate_headless(
 	}
 
 	Ok(match mode {
-		HeadlessGenerationMode::Dmi { flatten: _ } => HeadlessGenerationResult::Dmi {
+		SpritesheetGenerationMode::Dmi { flatten: _ } => SpritesheetImage::Dmi {
 			icon: Icon {
 				version: DmiVersion::default(),
 				width: expected_size.0,
@@ -440,7 +440,7 @@ pub fn generate_headless(
 			width: expected_size.0,
 			height: expected_size.1,
 		},
-		HeadlessGenerationMode::Png => {
+		SpritesheetGenerationMode::Png => {
 			let mut final_image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
 				RgbaImage::new(expected_size.0 * sprites_data.len() as u32, expected_size.1);
 			for (idx, (_, _, image_data, _)) in sprites_data.into_iter().enumerate() {
@@ -453,7 +453,7 @@ pub fn generate_headless(
 					}
 				}
 			}
-			HeadlessGenerationResult::Png {
+			SpritesheetImage::Png {
 				image: final_image,
 				width: expected_size.0,
 				height: expected_size.1,
@@ -476,7 +476,7 @@ fn ensure_dir_exists(path: PathBuf, error: &Arc<Mutex<Vec<String>>>) {
 	}
 }
 
-pub fn generate_spritesheet(
+pub fn generate_multisize_spritesheet_str(
 	file_path: &str,
 	spritesheet_name: &str,
 	sprites: &str,
@@ -484,14 +484,179 @@ pub fn generate_spritesheet(
 	generate_dmi: &str,
 	flatten: &str,
 ) -> std::result::Result<String, Error> {
-	zone!("generate_spritesheet");
-
 	let base_path = ICON_ROOT.join(file_path);
 
 	let hash_icons: bool = hash_icons == "1";
 	let generate_dmi: bool = generate_dmi == "1";
+
 	// PNGs cannot be non-flat
 	let flatten: bool = !generate_dmi || flatten == "1";
+
+	let mode: SpritesheetGenerationMode = if generate_dmi {
+		SpritesheetGenerationMode::Dmi { flatten }
+	} else {
+		SpritesheetGenerationMode::Png
+	};
+
+	let sprites_hash;
+	{
+		zone!("compute_sprites_hash");
+		sprites_hash = fixed_twox_string(sprites);
+	}
+	let sprites_map = match SPRITES_TO_JSON.lock().unwrap().get(&sprites_hash) {
+		Some(sprites) => sprites.clone(),
+		None => {
+			zone!("from_json_sprites"); // byondapi, save us
+			serde_json::from_str::<IndexMap<String, UniversalIcon>>(sprites)?
+		}
+	};
+
+	let result = generate_multisize_spritesheet(sprites_map, mode, true, true, hash_icons, false)?;
+
+	let game_meta = match result.game_meta {
+		Some(meta) => meta,
+		None => {
+			return Err(Error::IconForge(String::from(
+				"Did not receive game metadata from generate_multisize_spritesheet",
+			)));
+		}
+	};
+
+	let error = Arc::new(Mutex::new(Vec::<String>::new()));
+
+	{
+		zone!("precreate_dirs");
+		let mut parent_dirs =
+			std::collections::HashSet::<std::path::PathBuf>::with_capacity(result.images.len());
+
+		for size_id in result.images.keys() {
+			let output_path = base_path.join(format!(
+				"{}_{}.{}",
+				spritesheet_name,
+				size_id,
+				if generate_dmi { "dmi" } else { "png" }
+			));
+			if let Some(parent) = output_path.parent() {
+				parent_dirs.insert(parent.to_path_buf());
+			}
+		}
+
+		for dir in parent_dirs {
+			ensure_dir_exists(dir, &error);
+		}
+	}
+
+	result.images.par_iter().for_each(|(size_id, image)| {
+		zone!("write_spritesheet");
+		let file_path = base_path.join(format!(
+			"{}_{}.{}",
+			spritesheet_name,
+			size_id,
+			if generate_dmi { "dmi" } else { "png" }
+		));
+
+		match image {
+			SpritesheetImage::Dmi {
+				icon,
+				width: _,
+				height: _,
+			} => {
+				zone!("write_spritesheet_dmi");
+				{
+					zone!("create_file");
+					let mut output_file = match File::create(&file_path) {
+						Ok(f) => f,
+						Err(err) => {
+							error.lock().unwrap().push(format!(
+								"Failed to create DMI file '{}': {}",
+								file_path.display(),
+								err
+							));
+							return;
+						}
+					};
+					{
+						zone!("save_dmi");
+
+						if let Err(err) = icon.save(&mut output_file) {
+							error.lock().unwrap().push(err.to_string());
+						}
+					}
+				}
+			}
+			SpritesheetImage::Png {
+				image,
+				width: _,
+				height: _,
+			} => {
+				zone!("write_spritesheet_png");
+				if let Err(err) = image.save(&file_path) {
+					error.lock().unwrap().push(format!(
+						"Failed to save PNG file '{}': {}",
+						file_path.display(),
+						err
+					));
+				}
+			}
+		}
+	});
+
+	// Collect the game metadata and any errors.
+	let returned = SpritesheetResult {
+		sizes: game_meta.sizes,
+		sprites: game_meta.sprites,
+		dmi_hashes: if let Some(cache) = result.cache_meta {
+			cache.dmi_hashes.unwrap_or_default()
+		} else {
+			HashMap::new()
+		},
+		sprites_hash,
+		error: error.lock().unwrap().join("\n"),
+	};
+	Ok(serde_json::to_string::<SpritesheetResult>(&returned)?)
+}
+
+pub struct MultisizeSpritesheetGameMetadata {
+	/// list of sizes generated
+	pub sizes: Vec<String>,
+	/// map of sprite name / icon state name -> output size and position by x
+	/// offset
+	pub sprites: HashMap<String, SpritesheetEntry>,
+}
+
+pub struct MultisizeSpritesheetCacheMetadata {
+	/// map of file path -> xx64 hash
+	pub dmi_hashes: Option<HashMap<String, String>>,
+	/// xx64 hash of "sprites" input
+	pub sprites_hash: Option<String>,
+}
+
+pub struct MultisizeSpritesheet {
+	/// map of size ID (e.g. 32x32) -> a single spritesheet image containing the
+	/// result
+	pub images: HashMap<String, SpritesheetImage>,
+	/// metadata about the generated sprites
+	pub game_meta: Option<MultisizeSpritesheetGameMetadata>,
+	/// metadata used for cache validation
+	pub cache_meta: Option<MultisizeSpritesheetCacheMetadata>,
+}
+
+static TREE_GEN_NOTICE: Lazy<String> = Lazy::new(|| String::from("N/A, in tree generation stage"));
+
+pub fn generate_multisize_spritesheet(
+	sprites: IndexMap<String, UniversalIcon>,
+	mode: SpritesheetGenerationMode,
+	generate_game_meta: bool,
+	generate_cache_meta: bool,
+	generate_cache_icons_hash: bool,
+	generate_cache_sprites_hash: bool,
+) -> std::result::Result<MultisizeSpritesheet, Error> {
+	zone!("generate_spritesheet");
+
+	let flatten: bool = match mode {
+		SpritesheetGenerationMode::Dmi { flatten } => flatten,
+		SpritesheetGenerationMode::Png => true,
+	};
 	let error = Arc::new(Mutex::new(Vec::<String>::new()));
 	let dmi_hashes = DashMap::<String, String>::new();
 
@@ -511,30 +676,21 @@ pub fn generate_spritesheet(
 	>::with_hasher(
 		BuildHasherDefault::<XxHash64>::default()
 	)));
-	let sprites_hash;
-	{
-		zone!("compute_sprites_hash");
-		sprites_hash = fixed_twox_string(sprites);
-	}
-	let sprites_map = match SPRITES_TO_JSON.lock().unwrap().get(&sprites_hash) {
-		Some(sprites) => sprites.clone(),
-		None => {
-			zone!("from_json_sprites"); // byondapi, save us
-			serde_json::from_str::<IndexMap<String, UniversalIcon>>(sprites)?
-		}
-	};
 
 	// Pre-load all the DMIs now.
 	// This is much faster than doing it as we go (tested!), because sometimes
 	// multiple parallel iterators need the DMI.
-	sprites_map.par_iter().for_each(|(sprite_name, icon)| {
+	sprites.par_iter().for_each(|(sprite_name, icon)| {
 		zone!("sprite_to_icons");
 
 		icon.get_nested_icons(true)
 			.into_par_iter()
 			.for_each(|icon| match image_cache::filepath_to_dmi(&icon.icon_file) {
 				Ok(_) => {
-					if hash_icons && !dmi_hashes.contains_key(&icon.icon_file) {
+					if generate_cache_meta
+						&& generate_cache_icons_hash
+						&& !dmi_hashes.contains_key(&icon.icon_file)
+					{
 						zone!("hash_dmi");
 						match fixed_twox_file(&icon.icon_file) {
 							Ok(hash) => {
@@ -562,9 +718,6 @@ pub fn generate_spritesheet(
 		}
 	});
 
-	// cache this here so we don't generate the same string 5000 times
-	let sprite_name = String::from("N/A, in tree generation stage");
-
 	{
 		// Map duplicate transform sets into a tree.
 		// This is beneficial in the case where we have the same base image, and the
@@ -588,7 +741,7 @@ pub fn generate_spritesheet(
 				}
 			};
 			let (base_icon_data, _) =
-				match first_icon.get_image_data(&sprite_name, false, false, flatten) {
+				match first_icon.get_image_data(&TREE_GEN_NOTICE, false, false, flatten) {
 					Ok(icon_data) => icon_data,
 					Err(err) => {
 						error.lock().unwrap().push(err);
@@ -631,7 +784,7 @@ pub fn generate_spritesheet(
 
 	// Pick the specific icon states out of the DMI, also generating their
 	// transforms, build the spritesheet metadata.
-	sprites_map.par_iter().for_each(|sprite_entry| {
+	sprites.par_iter().for_each(|sprite_entry| {
 		zone!("map_sprite");
 		let (sprite_name, icon) = sprite_entry;
 
@@ -655,7 +808,7 @@ pub fn generate_spritesheet(
 			}
 		};
 
-		{
+		if generate_game_meta {
 			zone!("create_game_metadata");
 			// Generate the metadata used by the game
 			let size_id = format!("{}x{}", first.width(), first.height());
@@ -685,118 +838,104 @@ pub fn generate_spritesheet(
 		let guard = size_to_icon_objects.lock().unwrap();
 		guard.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
 	};
-	{
-		zone!("precreate_dirs");
-		let mut parent_dirs =
-			std::collections::HashSet::<std::path::PathBuf>::with_capacity(size_entries.len());
-
-		for (size_id, _) in &size_entries {
-			let output_path = base_path.join(format!(
-				"{}_{}.{}",
-				spritesheet_name,
-				size_id,
-				if generate_dmi { "dmi" } else { "png" }
-			));
-			if let Some(parent) = output_path.parent() {
-				parent_dirs.insert(parent.to_path_buf());
-			}
-		}
-
-		for dir in parent_dirs {
-			ensure_dir_exists(dir, &error);
-		}
-	}
-
-	size_entries
+	let (final_images, errors_to_log) = size_entries
 		.par_iter()
-		.for_each(|(size_id, sprite_entries)| {
-			zone!("join_sprites");
-			let file_path = base_path.join(format!(
-				"{}_{}.{}",
-				spritesheet_name,
-				size_id,
-				if generate_dmi { "dmi" } else { "png" }
-			));
-			let (base_width, base_height) = size_id
-				.split_once('x')
-				.map(|(w, h)| (w.parse::<u32>().unwrap(), h.parse::<u32>().unwrap()))
-				.unwrap();
+		.map(|(size_id, sprite_entries)| {
+			let process = || -> Result<(String, SpritesheetImage), String> {
+				zone!("join_sprites");
+				let (w_str, h_str) = size_id
+					.split_once('x')
+					.ok_or_else(|| format!("Invalid size format: {}", size_id))?;
 
-			if generate_dmi {
-				let output_states =
-					match create_dmi_output_states(sprite_entries, &sprites_map, flatten) {
-						Ok(output_states) => output_states,
-						Err(err) => {
-							error.lock().unwrap().push(err);
-							return;
-						}
-					};
-				{
-					zone!("write_spritesheet_dmi");
-					{
-						zone!("create_file");
-						let mut output_file = match File::create(&file_path) {
-							Ok(f) => f,
-							Err(err) => {
-								error.lock().unwrap().push(format!(
-									"Failed to create DMI file '{}': {}",
-									file_path.display(),
-									err
-								));
-								return;
-							}
-						};
-						{
-							zone!("save_dmi");
-							let dmi_icon = Icon {
+				let base_width = w_str
+					.parse::<u32>()
+					.map_err(|_| format!("Invalid width: {}", w_str))?;
+				let base_height = h_str
+					.parse::<u32>()
+					.map_err(|_| format!("Invalid height: {}", h_str))?;
+
+				let image = match mode {
+					SpritesheetGenerationMode::Dmi { .. } => {
+						let output_states =
+							create_dmi_output_states(sprite_entries, &sprites, flatten)?;
+						SpritesheetImage::Dmi {
+							icon: Icon {
 								version: DmiVersion::default(),
 								width: base_width,
 								height: base_height,
 								states: output_states.lock().unwrap().to_owned(),
-							};
-							if let Err(err) = dmi_icon.save(&mut output_file) {
-								error.lock().unwrap().push(err.to_string());
-							}
+							},
+							width: base_width,
+							height: base_height,
 						}
 					}
-				}
-			} else {
-				let final_image = match create_png_image(base_width, base_height, sprite_entries) {
-					Ok(image) => image,
-					Err(err) => {
-						error.lock().unwrap().push(err);
-						return;
-					}
+					SpritesheetGenerationMode::Png => SpritesheetImage::Png {
+						image: create_png_image(base_width, base_height, sprite_entries)?,
+						width: base_width,
+						height: base_height,
+					},
 				};
-				{
-					zone!("write_spritesheet_png");
-					if let Err(err) = final_image.save(&file_path) {
-						error.lock().unwrap().push(format!(
-							"Failed to save PNG file '{}': {}",
-							file_path.display(),
-							err
-						));
+				Ok((size_id.to_owned(), image))
+			};
+
+			process()
+		})
+		.fold(
+			|| (HashMap::new(), Vec::new()),
+			|(mut map, mut errs), result| {
+				match result {
+					Ok((id, img)) => {
+						map.insert(id, img);
 					}
+					Err(e) => errs.push(e),
 				}
-			}
-		});
+				(map, errs)
+			},
+		)
+		.reduce(
+			|| (HashMap::new(), Vec::new()),
+			|(mut map1, mut errs1), (map2, errs2)| {
+				map1.extend(map2);
+				errs1.extend(errs2);
+				(map1, errs1)
+			},
+		);
 
-	let sizes: Vec<String> = size_to_icon_objects
-		.lock()
-		.unwrap()
-		.keys()
-		.cloned()
-		.collect();
+	error.lock().unwrap().extend(errors_to_log);
 
-	// Collect the game metadata and any errors.
-	let returned = SpritesheetResult {
-		sizes,
-		sprites: sprites_objects,
-		dmi_hashes,
-		sprites_hash,
-		error: error.lock().unwrap().join("\n"),
-	};
-	Ok(serde_json::to_string::<SpritesheetResult>(&returned)?)
+	Ok(MultisizeSpritesheet {
+		game_meta: if generate_game_meta {
+			Some(MultisizeSpritesheetGameMetadata {
+				sizes: final_images.keys().cloned().collect(),
+				sprites: sprites_objects.into_iter().collect(),
+			})
+		} else {
+			None
+		},
+		cache_meta: if generate_cache_meta {
+			Some(MultisizeSpritesheetCacheMetadata {
+				dmi_hashes: if generate_cache_icons_hash {
+					Some(dmi_hashes.into_iter().collect())
+				} else {
+					None
+				},
+				sprites_hash: if generate_cache_sprites_hash {
+					let mut hasher = XxHash64::default();
+					sprites.len().hash(&mut hasher);
+					for (key, value) in sprites {
+						key.hash(&mut hasher);
+						value.hash(&mut hasher);
+					}
+					Some(format!("{:x}", hasher.finish()))
+				} else {
+					None
+				},
+			})
+		} else {
+			None
+		},
+		images: final_images,
+	})
 }
 
 fn create_png_image(
