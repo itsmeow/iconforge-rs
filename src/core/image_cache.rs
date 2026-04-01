@@ -1,4 +1,4 @@
-use super::universal_icon::{UniversalIcon, RenderedUniversalIcon};
+use super::universal_icon::{RenderedUniversalIcon, UniversalIcon};
 use dashmap::DashMap;
 use dmi::{
 	dirs::{ALL_DIRS, CARDINAL_DIRS, Dirs},

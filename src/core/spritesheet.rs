@@ -2,7 +2,7 @@ use super::{
 	hash::{fixed_twox_file, fixed_twox_string},
 	icon_operations::apply_all_transforms,
 	image_cache,
-	universal_icon::{Transform, UniversalIcon, RenderedUniversalIcon},
+	universal_icon::{RenderedUniversalIcon, Transform, UniversalIcon},
 };
 use crate::{
 	core::image_cache::{ICON_ROOT, cache_transformed_images},
@@ -846,10 +846,13 @@ pub fn spritesheet_multisize_from_universal_icons(
 
 			{
 				zone!("insert_into_sprite_objects");
-				sprites_objects.insert(sprite_name.to_owned(), SpritesheetEntry {
-					size_id: size_id.to_owned(),
-					position: icon_position,
-				});
+				sprites_objects.insert(
+					sprite_name.to_owned(),
+					SpritesheetEntry {
+						size_id: size_id.to_owned(),
+						position: icon_position,
+					},
+				);
 			}
 		}
 	});
