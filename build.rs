@@ -1,11 +1,6 @@
 //! Buildscript which will save a `iconforge.dm` with the DLL's public API.
 
-use std::{
-	env,
-	fs::File,
-	io::Write,
-	path::{Path, PathBuf},
-};
+use std::{env, fs::File, io::Write, path::PathBuf};
 
 macro_rules! feature_dm_file {
 	($name:expr) => {
@@ -14,25 +9,22 @@ macro_rules! feature_dm_file {
 }
 
 fn main() {
-	let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("Manifest dir not set");
-	let manifest_path = Path::new(&manifest_dir);
-
-	// Disable generation with 'cargo publish' or 'cargo package'
-	if manifest_path
-		.components()
-		.any(|c| c.as_os_str() == "package")
-	{
-		return;
-	}
-
 	let dm_path = if let Ok(custom_dir) = env::var("DM_OUT_DIR") {
 		if custom_dir.trim().is_empty() {
 			return;
 		}
 		PathBuf::from(custom_dir).join("iconforge.dm")
 	} else {
-		manifest_path.join("target").join("iconforge.dm")
+		let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+		PathBuf::from(out_dir).join("iconforge.dm")
 	};
+
+	println!(
+		"cargo:warning=Writing iconforge.dm to: {}",
+		dm_path.display()
+	);
+	println!("cargo:rustc-env=ICONFORGE_DM_PATH={}", dm_path.display());
+
 	let mut f = File::create(&dm_path).unwrap_or_else(|_| {
 		panic!(
 			"Couldn't open `{}` for writing iconforge-rs DM headers. Set DM_OUT_DIR to an empty \

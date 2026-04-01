@@ -127,7 +127,9 @@ fn find_and_copy_iconforge_lib() -> (String, &'static str, &'static str) {
 	let iconforge_rs_lib_path = format!("tests/dm/{iconforge_rs_lib_fname}");
 	let _ = fs::copy(&iconforge_rs_lib_source_path, &iconforge_rs_lib_path);
 	let iconforge_rs_dm_path = "tests/dm/iconforge.dm";
-	let _ = fs::copy("target/iconforge.dm", iconforge_rs_dm_path);
+	let generated_dm_path = env!("ICONFORGE_DM_PATH");
+	let _ = fs::copy(generated_dm_path, iconforge_rs_dm_path)
+		.expect("Failed to copy generated DM file to iconforge_rs_dm_path");
 	(
 		iconforge_rs_lib_path,
 		iconforge_rs_lib_fname,

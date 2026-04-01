@@ -1,7 +1,7 @@
 [package]
 name = "iconforge"
 edition = "2024"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["itsmeow <itsmeow@itsmeow.dev>"]
 repository = "https://github.com/itsmeow/iconforge-rs"
 license = "MIT"

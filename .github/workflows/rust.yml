@@ -48,7 +48,7 @@ jobs:
           path: |
             target/i686-pc-windows-msvc/release/iconforge.dll
             target/i686-pc-windows-msvc/release/iconforge.pdb
-            target/iconforge.dm
+            target/i686-pc-windows-msvc/release/iconforge.dm
 
   build-windows-x64:
     runs-on: windows-latest
@@ -83,7 +83,7 @@ jobs:
             target/x86_64-pc-windows-msvc/release/iconforge64.dll
             target/x86_64-pc-windows-msvc/release/iconforge64.pdb
             target/x86_64-pc-windows-msvc/release/iconforge.exe
-            target/iconforge.dm
+            target/x86_64-pc-windows-msvc/release/iconforge.dm
 
   build-linux:
     runs-on: ubuntu-latest
@@ -126,7 +126,7 @@ jobs:
           name: Linux Build
           path: |
             target/i686-unknown-linux-gnu/release/libiconforge.so
-            target/iconforge.dm
+            target/i686-unknown-linux-gnu/release/iconforge.dm
 
   build-linux-x64:
     runs-on: ubuntu-latest
@@ -168,4 +168,4 @@ jobs:
           path: |
             target/x86_64-unknown-linux-gnu/release/libiconforge64.so
             target/x86_64-unknown-linux-gnu/release/iconforge
-            target/iconforge.dm
+            target/x86_64-unknown-linux-gnu/release/iconforge.dm

@@ -36,7 +36,7 @@ Public release binaries of IconForge do *not* use native CPU optimizations, so b
 
 ## Installation
 
-To install IconForge to a BYOND repository, copy `target/iconforge.dm` into an early stage of your .dme, so that it can create `#define`s for later files. Place the remaining files wherever makes sense for your repository.
+To install IconForge to a BYOND repository, copy `iconforge.dm` into an early stage of your .dme, so that it can create `#define`s for later files. Place the remaining files wherever makes sense for your repository.
 
 `iconforge.dm` function calls will search for a corresponding native library (`.dll` or `.so`) in the following locations:
 
