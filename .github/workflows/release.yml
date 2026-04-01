@@ -22,7 +22,7 @@ jobs:
         with:
           name: Windows Build
           workflow: rust.yml
-          branch: master
+          branch: main
           path: ./artifacts/windows
 
       - name: Download Linux Build Artifact
@@ -30,7 +30,7 @@ jobs:
         with:
           name: Linux Build
           workflow: rust.yml
-          branch: master
+          branch: main
           path: ./artifacts/linux
 
       # Download 64-bit artifacts
@@ -39,7 +39,7 @@ jobs:
         with:
           name: Windows Build x64
           workflow: rust.yml
-          branch: master
+          branch: main
           path: ./artifacts/windows-x64
 
       - name: Download Linux x64 Build Artifact
@@ -47,7 +47,7 @@ jobs:
         with:
           name: Linux Build x64
           workflow: rust.yml
-          branch: master
+          branch: main
           path: ./artifacts/linux-x64
 
       - name: Create Release
