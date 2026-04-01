@@ -2,7 +2,7 @@ use super::{
 	hash::{fixed_twox_file, fixed_twox_string},
 	icon_operations::apply_all_transforms,
 	image_cache,
-	universal_icon::{Transform, UniversalIcon, UniversalIconData},
+	universal_icon::{Transform, UniversalIcon, RenderedUniversalIcon},
 };
 use crate::{
 	core::image_cache::{ICON_ROOT, cache_transformed_images},
@@ -14,7 +14,7 @@ use image::RgbaImage;
 use indexmap::IndexMap;
 use once_cell::sync::Lazy;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::{HashMap, HashSet},
 	fs::File,
@@ -34,7 +34,7 @@ static SPRITES_TO_JSON: Lazy<Arc<Mutex<SpriteJsonMap>>> = Lazy::new(|| {
 	>::default())))
 });
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct SpritesheetResult {
 	pub file_path: Option<String>,
 	pub width: Option<u32>,
@@ -42,7 +42,7 @@ pub struct SpritesheetResult {
 	pub error: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
 pub struct MultisizeSpritesheetResult {
 	pub sizes: Vec<String>,
 	pub sprites: HashMap<String, SpritesheetEntry>,
@@ -51,17 +51,47 @@ pub struct MultisizeSpritesheetResult {
 	pub error: String,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
+pub struct MultisizeSpritesheetGameMetadata {
+	/// list of sizes generated
+	pub sizes: Vec<String>,
+	/// map of sprite name / icon state name -> output size and position by x
+	/// offset
+	pub sprites: HashMap<String, SpritesheetEntry>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
+pub struct MultisizeSpritesheetCacheMetadata {
+	/// map of file path -> xx64 hash
+	pub dmi_hashes: Option<HashMap<String, String>>,
+	/// xx64 hash of "sprites" input
+	pub sprites_hash: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultisizeSpritesheet {
+	/// map of size ID (e.g. 32x32) -> a single spritesheet image containing the
+	/// result
+	pub images: HashMap<String, SpritesheetImage>,
+	/// metadata about the generated sprites
+	pub game_meta: Option<MultisizeSpritesheetGameMetadata>,
+	/// metadata used for cache validation
+	pub cache_meta: Option<MultisizeSpritesheetCacheMetadata>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct SpritesheetEntry {
 	pub size_id: String,
 	pub position: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum SpritesheetGenerationMode {
 	Png,
 	Dmi { flatten: bool },
 }
 
+#[derive(Clone, PartialEq, Debug)]
 pub enum SpritesheetImage {
 	Png {
 		image: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
@@ -347,7 +377,7 @@ pub fn spritesheet_from_universal_icons(
 	let mut sprites_data: Vec<(
 		String,
 		&UniversalIcon,
-		Arc<UniversalIconData>,
+		Arc<RenderedUniversalIcon>,
 		Option<IconState>,
 	)>;
 	{
@@ -631,31 +661,6 @@ pub fn spritesheet_multisize_from_universal_icons_str(
 	Ok(serde_json::to_string::<MultisizeSpritesheetResult>(
 		&returned,
 	)?)
-}
-
-pub struct MultisizeSpritesheetGameMetadata {
-	/// list of sizes generated
-	pub sizes: Vec<String>,
-	/// map of sprite name / icon state name -> output size and position by x
-	/// offset
-	pub sprites: HashMap<String, SpritesheetEntry>,
-}
-
-pub struct MultisizeSpritesheetCacheMetadata {
-	/// map of file path -> xx64 hash
-	pub dmi_hashes: Option<HashMap<String, String>>,
-	/// xx64 hash of "sprites" input
-	pub sprites_hash: Option<String>,
-}
-
-pub struct MultisizeSpritesheet {
-	/// map of size ID (e.g. 32x32) -> a single spritesheet image containing the
-	/// result
-	pub images: HashMap<String, SpritesheetImage>,
-	/// metadata about the generated sprites
-	pub game_meta: Option<MultisizeSpritesheetGameMetadata>,
-	/// metadata used for cache validation
-	pub cache_meta: Option<MultisizeSpritesheetCacheMetadata>,
 }
 
 static TREE_GEN_NOTICE: Lazy<String> = Lazy::new(|| String::from("N/A, in tree generation stage"));
@@ -1034,7 +1039,7 @@ fn create_dmi_output_states(
 /// is 128.
 fn transform_leaves(
 	icons: &Vec<&UniversalIcon>,
-	image_data: Arc<UniversalIconData>,
+	image_data: Arc<RenderedUniversalIcon>,
 	depth: u8,
 	flatten: bool,
 ) -> Result<(), String> {

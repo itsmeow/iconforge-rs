@@ -1,4 +1,4 @@
-use super::universal_icon::{UniversalIcon, UniversalIconData};
+use super::universal_icon::{UniversalIcon, RenderedUniversalIcon};
 use dashmap::DashMap;
 use dmi::{
 	dirs::{ALL_DIRS, CARDINAL_DIRS, Dirs},
@@ -36,14 +36,14 @@ impl Drop for CacheGuard {
 	}
 }
 
-/// A cache of UniversalIcon to UniversalIconData. In order for something to
+/// A cache of UniversalIcon to RenderedUniversalIcon. In order for something to
 /// exist in this cache, it must have had any transforms applied to the images.
 static ICON_STATES: Lazy<
-	DashMap<UniversalIcon, Arc<UniversalIconData>, BuildHasherDefault<XxHash64>>,
+	DashMap<UniversalIcon, Arc<RenderedUniversalIcon>, BuildHasherDefault<XxHash64>>,
 > = Lazy::new(|| DashMap::with_hasher(BuildHasherDefault::<XxHash64>::default()));
 
 static ICON_STATES_FLAT: Lazy<
-	DashMap<UniversalIcon, Arc<UniversalIconData>, BuildHasherDefault<XxHash64>>,
+	DashMap<UniversalIcon, Arc<RenderedUniversalIcon>, BuildHasherDefault<XxHash64>>,
 > = Lazy::new(|| DashMap::with_hasher(BuildHasherDefault::<XxHash64>::default()));
 
 pub fn image_cache_contains(icon: &UniversalIcon, flatten: bool) -> bool {
@@ -62,10 +62,10 @@ pub fn image_cache_clear() {
 }
 
 impl UniversalIcon {
-	/// Gets this icon's associated DMI, then picks out a UniversalIconData for
+	/// Gets this icon's associated DMI, then picks out a RenderedUniversalIcon for
 	/// the IconState. If flatten is true, will output only one dir and frame
 	/// (defaulting to SOUTH/1 if unscoped) regardless of the input uni_icon
-	/// Returns with True if the UniversalIconData is pre-cached (and shouldn't
+	/// Returns with True if the RenderedUniversalIcon is pre-cached (and shouldn't
 	/// have new transforms applied)
 	pub fn get_image_data(
 		&self,
@@ -73,7 +73,7 @@ impl UniversalIcon {
 		cached: bool,
 		must_be_cached: bool,
 		flatten: bool,
-	) -> Result<(Arc<UniversalIconData>, bool), String> {
+	) -> Result<(Arc<RenderedUniversalIcon>, bool), String> {
 		zone!("universal_icon_to_image_data");
 		let _guard = CacheGuard::new();
 		if cached {
@@ -188,7 +188,7 @@ impl UniversalIcon {
 			}
 		}
 
-		let result = Arc::new(UniversalIconData {
+		let result = Arc::new(RenderedUniversalIcon {
 			images,
 			frames: frames as u32,
 			dirs: dirs as u8,
@@ -209,7 +209,7 @@ impl UniversalIcon {
 
 pub fn cache_transformed_images(
 	uni_icon: &UniversalIcon,
-	image_data: Arc<UniversalIconData>,
+	image_data: Arc<RenderedUniversalIcon>,
 	flatten: bool,
 ) {
 	zone!("cache_transformed_images");

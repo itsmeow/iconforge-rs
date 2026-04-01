@@ -5,7 +5,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use tracy_full::zone;
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct UniversalIcon {
 	pub icon_file: String,
 	pub icon_state: String,
@@ -57,7 +57,7 @@ impl UniversalIcon {
 	}
 }
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 #[serde(tag = "type")]
 pub enum Transform {
 	BlendColor {
@@ -112,8 +112,8 @@ pub enum Transform {
 	},
 }
 
-#[derive(Clone)]
-pub struct UniversalIconData {
+#[derive(Clone, Debug)]
+pub struct RenderedUniversalIcon {
 	pub images: Vec<RgbaImage>,
 	pub frames: u32,
 	pub dirs: u8,
@@ -122,7 +122,7 @@ pub struct UniversalIconData {
 	pub rewind: bool,
 }
 
-impl UniversalIconData {
+impl RenderedUniversalIcon {
 	pub fn map_cloned_images<F>(&self, do_fn: F) -> Vec<RgbaImage>
 	where
 		F: Fn(&mut RgbaImage) + Send + Sync,
@@ -137,8 +137,8 @@ impl UniversalIconData {
 			.collect()
 	}
 
-	pub fn from_iconstate_ref(icon_state: &IconState) -> UniversalIconData {
-		UniversalIconData {
+	pub fn from_iconstate_ref(icon_state: &IconState) -> RenderedUniversalIcon {
+		RenderedUniversalIcon {
 			images: icon_state.images.to_owned(),
 			frames: icon_state.frames,
 			dirs: icon_state.dirs,
@@ -148,8 +148,8 @@ impl UniversalIconData {
 		}
 	}
 
-	pub fn from_iconstate(icon_state: IconState) -> UniversalIconData {
-		UniversalIconData {
+	pub fn from_iconstate(icon_state: IconState) -> RenderedUniversalIcon {
+		RenderedUniversalIcon {
 			images: icon_state.images,
 			frames: icon_state.frames,
 			dirs: icon_state.dirs,

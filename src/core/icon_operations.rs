@@ -1,6 +1,6 @@
 use super::{
 	blending, image_cache,
-	universal_icon::{Transform, UniversalIconData},
+	universal_icon::{RenderedUniversalIcon, Transform},
 };
 use crate::error::Error;
 use dmi::{dirs::Dirs, icon::IconState};
@@ -485,11 +485,11 @@ pub fn map_colors(
 /// The frame and dir counts of first_matched_state are mutated to match the new
 /// icon.
 pub fn blend_images_other_universal(
-	image_data: Arc<UniversalIconData>,
-	image_data_other: Arc<UniversalIconData>,
+	image_data: Arc<RenderedUniversalIcon>,
+	image_data_other: Arc<RenderedUniversalIcon>,
 	blend_mode: &blending::BlendMode,
 	position: Option<(i32, i32)>,
-) -> Result<UniversalIconData, Error> {
+) -> Result<RenderedUniversalIcon, Error> {
 	zone!("blend_images_other_universal");
 	let errors = Arc::new(Mutex::new(Vec::<String>::new()));
 	let expected_length_first = image_data.dirs as u32 * image_data.frames;
@@ -621,7 +621,7 @@ pub fn blend_images_other_universal(
 	if !errors_unlock.is_empty() {
 		return Err(Error::IconForge(errors_unlock.join("\n")));
 	}
-	Ok(UniversalIconData {
+	Ok(RenderedUniversalIcon {
 		images: images_out,
 		frames: frames_out,
 		dirs: dirs_out,
@@ -794,13 +794,13 @@ pub fn blend_images_other(
 }
 
 impl Transform {
-	/// Applies this transform to UniversalIconData. Optionally flattens to only
-	/// the first dir and frame.
+	/// Applies this transform to RenderedUniversalIcon. Optionally flattens to
+	/// only the first dir and frame.
 	pub fn apply(
 		&self,
-		image_data: Arc<UniversalIconData>,
+		image_data: Arc<RenderedUniversalIcon>,
 		flatten: bool,
-	) -> Result<UniversalIconData, String> {
+	) -> Result<RenderedUniversalIcon, String> {
 		zone!("transform_apply");
 		let images: Vec<RgbaImage>;
 		let mut frames = image_data.frames;
@@ -933,7 +933,7 @@ impl Transform {
 					image_data.map_cloned_images(|image| draw_box(image, rgba, x1, y1, x2, y2));
 			}
 		}
-		Ok(UniversalIconData {
+		Ok(RenderedUniversalIcon {
 			images,
 			frames,
 			dirs,
@@ -944,14 +944,14 @@ impl Transform {
 	}
 }
 
-/// Applies a list of Transforms to UniversalIconData immediately and
+/// Applies a list of Transforms to RenderedUniversalIcon immediately and
 /// sequentially, while handling any errors. Optionally flattens to only the
 /// first dir and frame.
 pub fn apply_all_transforms(
-	image_data: Arc<UniversalIconData>,
+	image_data: Arc<RenderedUniversalIcon>,
 	transforms: &Vec<Transform>,
 	flatten: bool,
-) -> Result<Arc<UniversalIconData>, String> {
+) -> Result<Arc<RenderedUniversalIcon>, String> {
 	let mut errors = Vec::<String>::new();
 	let mut last_image_data = image_data;
 	for transform in transforms {
