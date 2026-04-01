@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - '*'
+    tags: ['v*']
 
 permissions:
   contents: write
@@ -66,3 +65,15 @@ jobs:
             ./artifacts/windows/iconforge.dm
             ./artifacts/windows-x64/x86_64-pc-windows-msvc/release/iconforge_cli.exe
             ./artifacts/linux-x64/x86_64-unknown-linux-gnu/release/iconforge_cli
+  publish:
+    runs-on: ubuntu-latest
+    environment: release  # Optional: for enhanced security
+    permissions:
+      id-token: write     # Required for OIDC token exchange
+    steps:
+    - uses: actions/checkout@v6
+    - uses: rust-lang/crates-io-auth-action@v1
+      id: auth
+    - run: cargo publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
