@@ -9,6 +9,9 @@ macro_rules! feature_dm_file {
 }
 
 fn main() {
+	if env::var("CARGO_PUBLISH").is_ok() {
+		return;
+	}
 	let dm_path = if let Ok(custom_dir) = env::var("DM_OUT_DIR") {
 		if custom_dir.trim().is_empty() {
 			return;
