@@ -13,6 +13,7 @@ use std::{
 };
 
 #[test]
+#[cfg(feature = "ffi")]
 fn iconforge() {
 	tmp_cleanup();
 	// Generate icons for comparison

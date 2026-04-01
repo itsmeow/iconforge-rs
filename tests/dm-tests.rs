@@ -1,14 +1,17 @@
+#[cfg(feature = "ffi")]
 use std::{
 	fs,
 	path::Path,
 	process::{Command, Output},
 };
 
+#[cfg(feature = "ffi")]
 pub mod iconforge;
 
 /**
  * Find a valid BYOND bin path on the system.
  */
+#[cfg(feature = "ffi")]
 fn find_byond() -> String {
 	match std::env::var("BYOND_BIN") {
 		Ok(bin) => bin,
@@ -38,26 +41,41 @@ fn find_byond() -> String {
 	}
 }
 
+#[cfg(feature = "ffi")]
+fn use_byond_executable<F>(byond_bin: &str, windows: &str, linux: &str, command: F) -> Output
+where
+	F: Fn(&mut Command) -> &mut Command,
+{
+	if cfg!(target_os = "linux") {
+		let byondexec = format!("{byond_bin}/byondexec");
+		let linux_full = format!("{byond_bin}/{linux}");
+		command(Command::new("bash").arg(&byondexec).arg(&linux_full))
+			.output()
+			.unwrap()
+	} else {
+		let windows_full = format!("{byond_bin}/{windows}");
+		command(&mut Command::new(&windows_full)).output().unwrap()
+	}
+}
+
+#[cfg(feature = "ffi")]
 fn compile_and_run_dme(name: &str, iconforge_rs_lib_path: &str, chdir: Option<&str>) -> Output {
 	let byond_bin = find_byond();
-	let dream_maker = format!("{byond_bin}/dm");
-	let dream_daemon = format!("{byond_bin}/dd");
 
 	let dme = format!("tests/dm/{name}.dme");
 	let dmb = format!("tests/dm/{name}.dmb");
 
-	let output = Command::new(&dream_maker).arg(&dme).output().unwrap();
+	let output = use_byond_executable(&byond_bin, "dm", "DreamMaker", |c| c.arg(&dme));
 	dump(&output);
 	generic_check(&output);
 
-	let output = Command::new(&dream_daemon)
-		.arg(&dmb)
-		.arg("-trusted")
-		.arg("-cd")
-		.arg(chdir.unwrap_or("."))
-		.env("ICONFORGE", iconforge_rs_lib_path)
-		.output()
-		.unwrap();
+	let output = use_byond_executable(&byond_bin, "dd", "DreamDaemon", |c| {
+		c.arg(&dmb)
+			.arg("-trusted")
+			.arg("-cd")
+			.arg(chdir.unwrap_or("."))
+			.env("ICONFORGE", iconforge_rs_lib_path)
+	});
 
 	// Cleanup
 	let _ = std::fs::remove_file(&dmb);
@@ -75,6 +93,7 @@ fn compile_and_run_dme(name: &str, iconforge_rs_lib_path: &str, chdir: Option<&s
  * Find the iconforge binary and DMSRC and copy them into the test run
  * directory
  */
+#[cfg(feature = "ffi")]
 fn find_and_copy_iconforge_lib() -> (String, &'static str, &'static str) {
 	let target_dir = if cfg!(target_os = "linux") {
 		"i686-unknown-linux-gnu"
@@ -116,6 +135,7 @@ fn find_and_copy_iconforge_lib() -> (String, &'static str, &'static str) {
 	)
 }
 
+#[cfg(feature = "ffi")]
 fn run_dm_tests(name: &str, use_repo_root: bool) {
 	let (iconforge_rs_lib_path, iconforge_rs_lib_fname, iconforge_rs_dm_path) =
 		find_and_copy_iconforge_lib();
@@ -140,17 +160,20 @@ fn run_dm_tests(name: &str, use_repo_root: bool) {
 	let _ = std::fs::remove_file(iconforge_rs_dm_path);
 }
 
+#[cfg(feature = "ffi")]
 fn dump(output: &Output) {
 	print!("{}", String::from_utf8_lossy(&output.stdout));
 	eprint!("{}", String::from_utf8_lossy(&output.stderr));
 }
 
+#[cfg(feature = "ffi")]
 fn generic_check(output: &Output) {
 	if !output.status.success() {
 		panic!("process exited with {:?}", output.status);
 	}
 }
 
+#[cfg(feature = "ffi")]
 fn runtime_check(output: &Output) {
 	for line in output.stderr.split(|&c| c == b'\n') {
 		if line.starts_with(b"runtime error: ") {

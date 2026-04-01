@@ -10,6 +10,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: release
 
     steps:
       - name: Checkout
@@ -67,9 +68,9 @@ jobs:
             ./artifacts/linux-x64/x86_64-unknown-linux-gnu/release/iconforge_cli
   publish:
     runs-on: ubuntu-latest
-    environment: release  # Optional: for enhanced security
+    environment: release
     permissions:
-      id-token: write     # Required for OIDC token exchange
+      id-token: write
     steps:
     - uses: actions/checkout@v6
     - uses: rust-lang/crates-io-auth-action@v1

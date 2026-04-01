@@ -25,8 +25,8 @@ impl std::fmt::Display for UniversalIcon {
 }
 
 impl UniversalIcon {
-	/// Returns a new UniversalIcon that's a copy of the current one without any
-	/// transforms
+	/// Returns a new [`UniversalIcon`] that's a copy of the current one without
+	/// any transforms
 	pub fn to_base(&self) -> Self {
 		UniversalIcon {
 			icon_file: self.icon_file.to_owned(),
@@ -37,7 +37,7 @@ impl UniversalIcon {
 		}
 	}
 
-	/// Gives a list of nested icons within this UniversalIcon. Optionally
+	/// Gives a list of nested icons within this [`UniversalIcon`]. Optionally
 	/// returns a reference to the self at the start of the list.
 	pub fn get_nested_icons(&self, include_self: bool) -> Vec<&UniversalIcon> {
 		zone!("get_nested_icons");

@@ -10,6 +10,7 @@ description = "Offloaded icon generation functions for BYOND and SS13"
 rust-version = "1.87"
 keywords = ["dmi", "images", "sprites", "icons", "byond"]
 categories = ["multimedia::images", "game-development"]
+build = "build.rs"
 
 [lib]
 name = "iconforge"

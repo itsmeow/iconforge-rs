@@ -62,11 +62,16 @@ pub fn image_cache_clear() {
 }
 
 impl UniversalIcon {
-	/// Gets this icon's associated DMI, then picks out a RenderedUniversalIcon for
-	/// the IconState. If flatten is true, will output only one dir and frame
-	/// (defaulting to SOUTH/1 if unscoped) regardless of the input uni_icon
-	/// Returns with True if the RenderedUniversalIcon is pre-cached (and shouldn't
+	/// Gets this icon's associated DMI, then picks out a
+	/// [`RenderedUniversalIcon`] for the IconState, using a cache where
+	/// possible. If `flatten` is true, will output only one dir and frame
+	/// (defaulting to SOUTH/1 if unscoped) regardless of the input. Returns
+	/// with True if the [`RenderedUniversalIcon`] is pre-cached (and shouldn't
 	/// have new transforms applied)
+	///
+	/// `sprite_name` is only used for debug purposes. Will emit an error if
+	/// `must_be_cached` is true and the image is not in the cache. If `cached`
+	/// is false, the cache will not be checked as an optimization.
 	pub fn get_image_data(
 		&self,
 		sprite_name: &String,

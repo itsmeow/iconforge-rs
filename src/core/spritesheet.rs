@@ -85,12 +85,20 @@ pub struct SpritesheetEntry {
 	pub position: u32,
 }
 
+/// Controls the output mode of a spritesheet generator function. Flattening
+/// will force all the output to use a single defined dir or frame from the base
+/// [`UniversalIcon`], defaulting to `SOUTH` / frame 1 if none is defined.
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash)]
 pub enum SpritesheetGenerationMode {
 	Png,
 	Dmi { flatten: bool },
 }
 
+/// Stores the in-memory result of a spritesheet generator function such as
+/// [`spritesheet_from_universal_icons`] or
+/// [`spritesheet_multisize_from_universal_icons`], as well as the base width
+/// and height of the contents of the spritesheet (rather than the overall
+/// height of the output image)
 #[derive(Clone, PartialEq, Debug)]
 pub enum SpritesheetImage {
 	Png {
@@ -294,6 +302,13 @@ pub fn spritesheet_from_universal_icons_str(
 	}
 }
 
+/// Given an ordered map of icon_state names to [`UniversalIcon`],
+/// produces a spritesheet or icon containing all the defined states in
+/// parallel.
+///
+/// `mode` controls the output format, wherein a PNG will
+/// discard the state names and any associated metadata and flatten all icons to
+/// the defined dir and frame.
 pub fn spritesheet_from_universal_icons(
 	icon_states: IndexMap<String, UniversalIcon>,
 	mode: SpritesheetGenerationMode,
@@ -665,6 +680,17 @@ pub fn spritesheet_multisize_from_universal_icons_str(
 
 static TREE_GEN_NOTICE: Lazy<String> = Lazy::new(|| String::from("N/A, in tree generation stage"));
 
+/// Given an ordered map of icon_state names to [`UniversalIcon`],
+/// produces multiple spritesheets or icons containing all the defined states in
+/// parallel. Sprites of different base width and heights will be
+/// mapped to different size_ids within [`MultisizeSpritesheet`]
+///
+/// `mode` controls the output format, wherein a PNG will
+/// discard the state names and any associated metadata and flatten all icons to
+/// the defined dir and frame.
+///
+/// `generate_` parameters control the type of metadata provided, and can be
+/// disabled separately for performance reasons.
 pub fn spritesheet_multisize_from_universal_icons(
 	sprites: IndexMap<String, UniversalIcon>,
 	mode: SpritesheetGenerationMode,
@@ -1115,6 +1141,11 @@ struct CacheResult {
 	fail_reason: String,
 }
 
+/// Compares JSON-encoded `sprites_in` (an [`IndexMap<String, UniversalIcon>`])
+/// and its contained [`UniversalIcon`]s with a cached hash of `sprites`
+/// (`input_hash`) and a JSON-encoded map of source DMI file hashes
+/// (`dmi_hashes_in`) to determine if any constituent components have changed
+/// and the spritesheet should be regenerated.
 pub fn cache_valid(
 	input_hash: &str,
 	dmi_hashes_in: &str,

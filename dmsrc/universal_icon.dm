@@ -5,7 +5,7 @@ var/g_##part = iconforge_hex2num(copytext(text, 4, 6)) / 255; \
 var/b_##part = iconforge_hex2num(copytext(text, 6, 8)) / 255
 #define iconforge_rgba2hex(part, text) var/r_##part = iconforge_hex2num(copytext(text, 2, 4)) / 255; \
 var/g_##part = iconforge_hex2num(copytext(text, 4, 6)) / 255; \
-var/b_##part = iconforge_hex2num(copytext(text, 6, 8)) / 255 \
+var/b_##part = iconforge_hex2num(copytext(text, 6, 8)) / 255; \
 var/a_##part = iconforge_hex2num(copytext(text, 8, 10)) / 255
 
 
@@ -110,22 +110,22 @@ var/a_##part = iconforge_hex2num(copytext(text, 8, 10)) / 255
 /datum/universal_icon/proc/map_colors_rgb_hex(r_rgb, g_rgb, b_rgb, rgb0=rgb(0,0,0))
 	if(!transform)
 		transform = new
-    iconforge_rgb2hex(r, r_rgb)
-    iconforge_rgb2hex(g, g_rgb)
-    iconforge_rgb2hex(b, b_rgb)
-    iconforge_rgb2hex(z, rgb0)
-    transform.map_colors(r_r, g_r, b_r, 0, r_g, g_g, b_g, 0, r_b, g_b, b_b, 0, 0, 0, 0, 1, r_z, b_z, g_z, 0)
+	iconforge_rgb2hex(r, r_rgb)
+	iconforge_rgb2hex(g, g_rgb)
+	iconforge_rgb2hex(b, b_rgb)
+	iconforge_rgb2hex(z, rgb0)
+	transform.map_colors(r_r, g_r, b_r, 0, r_g, g_g, b_g, 0, r_b, g_b, b_b, 0, 0, 0, 0, 1, r_z, b_z, g_z, 0)
 	return src
 
 /datum/universal_icon/proc/map_colors_rgba_hex(r_rgba, g_rgba, b_rgba, a_rgba, rgba0="#00000000")
 	if(!transform)
 		transform = new
 	iconforge_rgba2hex(r, r_rgba)
-    iconforge_rgba2hex(g, g_rgba)
-    iconforge_rgba2hex(b, b_rgba)
+	iconforge_rgba2hex(g, g_rgba)
+	iconforge_rgba2hex(b, b_rgba)
 	iconforge_rgba2hex(a, a_rgba)
-    iconforge_rgba2hex(z, rgba0)
-    transform.map_colors(r_r, g_r, b_r, a_r, r_g, g_g, b_g, a_g, r_b, g_b, b_b, a_b, r_a, g_a, b_a, a_a, r_z, b_z, g_z, a_z)
+	iconforge_rgba2hex(z, rgba0)
+	transform.map_colors(r_r, g_r, b_r, a_r, r_g, g_g, b_g, a_g, r_b, g_b, b_b, a_b, r_a, g_a, b_a, a_a, r_z, b_z, g_z, a_z)
 	return src
 
 /datum/universal_icon/proc/to_list()
