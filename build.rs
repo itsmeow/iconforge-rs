@@ -9,8 +9,7 @@ macro_rules! feature_dm_file {
 }
 
 fn main() {
-	let target_dir = env::var("DM_OUT_DIR")
-		.unwrap_or_else(|_| env::var("OUT_DIR").unwrap_or_else(|_| String::from(".")));
+	let target_dir = env::var("DM_OUT_DIR").unwrap_or_else(|_| String::from("target"));
 	if target_dir.trim().is_empty() {
 		return;
 	}
