@@ -1,0 +1,171 @@
+name: rust-g
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      BYOND_MAJOR: 516
+      BYOND_MINOR: 1667
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install BYOND
+        run: |
+          bash scripts/install_byond.sh
+          echo "BYOND_BIN=$env:USERPROFILE\BYOND\byond\bin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - uses: dtolnay/rust-toolchain@1.89
+        with:
+          targets: i686-pc-windows-msvc
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Clippy (all features)
+        run: cargo clippy --target i686-pc-windows-msvc --all-features --locked -- -D warnings
+
+      - name: Rustfmt
+        run: cargo fmt -- --check
+
+      - name: Build (Debug) (all features)
+        run: cargo build --target i686-pc-windows-msvc --locked --all-features
+
+      - name: Run tests (all features)
+        run: cargo test --target i686-pc-windows-msvc --locked --all-features
+
+      - name: Build (release) (all features)
+        run: cargo build --target i686-pc-windows-msvc --locked --release --all-features
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Windows Build
+          path: |
+            target/i686-pc-windows-msvc/release/iconforge.dll
+            target/i686-pc-windows-msvc/release/iconforge.pdb
+            target/iconforge.dm
+
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@1.89
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: x64 Clippy (all features)
+        run: cargo clippy --target x86_64-pc-windows-msvc --all-features --locked -- -D warnings
+
+      - name: Rustfmt
+        run: cargo fmt -- --check
+
+      - name: x64 Build (release) (all features)
+        run: cargo build --target x86_64-pc-windows-msvc --all-features --locked --release --all-features
+
+      - name: Rename x64 artifacts
+        run: |
+          Move-Item -Path "target\x86_64-pc-windows-msvc\release\iconforge.dll" -Destination "target\x86_64-pc-windows-msvc\release\iconforge64.dll"
+          Move-Item -Path "target\x86_64-pc-windows-msvc\release\iconforge.pdb" -Destination "target\x86_64-pc-windows-msvc\release\iconforge64.pdb"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Windows Build x64
+          path: |
+            target/x86_64-pc-windows-msvc/release/iconforge64.dll
+            target/x86_64-pc-windows-msvc/release/iconforge64.pdb
+            target/x86_64-pc-windows-msvc/release/iconforge.exe
+            target/iconforge.dm
+
+  build-linux:
+    runs-on: ubuntu-latest
+    env:
+      BYOND_MAJOR: 516
+      BYOND_MINOR: 1667
+      PKG_CONFIG_ALLOW_CROSS: 1
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install libgcc-s1:i386 g++-multilib zlib1g-dev:i386 libcurl4:i386
+          ./scripts/install_byond.sh
+
+      - uses: dtolnay/rust-toolchain@1.89
+        with:
+          targets: i686-unknown-linux-gnu, x86_64-unknown-linux-gnu
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check (all features)
+        run: cargo check --target i686-unknown-linux-gnu --locked --all-features
+
+      - name: Build (Debug) (all features)
+        run: cargo build --target i686-unknown-linux-gnu --locked --all-features
+
+      - name: Run tests (all features)
+        run: cargo test --target i686-unknown-linux-gnu --locked --all-features
+        env:
+          BYOND_BIN: /home/runner/BYOND/byond/bin
+
+      - name: Build (release) (all features)
+        run: cargo build --target i686-unknown-linux-gnu --locked --release --all-features
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Linux Build
+          path: |
+            target/i686-unknown-linux-gnu/release/iconforge.so
+            target/iconforge.dm
+
+  build-linux-x64:
+    runs-on: ubuntu-latest
+    env:
+      BYOND_MAJOR: 516
+      BYOND_MINOR: 1667
+      PKG_CONFIG_ALLOW_CROSS: 1
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install libgcc-s1:i386 g++-multilib zlib1g-dev:i386 libcurl4:i386
+          ./scripts/install_byond.sh
+
+      - uses: dtolnay/rust-toolchain@1.89
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: x64 Check (all features)
+        run: cargo check --target x86_64-unknown-linux-gnu --locked --all-features
+
+      - name: x64 Build (Debug) (all features)
+        run: cargo build --target x86_64-unknown-linux-gnu --locked --all-features
+
+      - name: x64 Build (release) (all features)
+        run: cargo build --target x86_64-unknown-linux-gnu --locked --all-features --release
+
+      - name: Rename x64 artifacts
+        run: mv target/x86_64-unknown-linux-gnu/release/iconforge.so target/x86_64-unknown-linux-gnu/release/iconforge64.so
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Linux Build x64
+          path: |
+            target/x86_64-unknown-linux-gnu/release/iconforge64.so
+            target/x86_64-unknown-linux-gnu/release/iconforge
+            target/iconforge.dm
