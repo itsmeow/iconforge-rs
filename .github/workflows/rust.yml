@@ -125,7 +125,7 @@ jobs:
         with:
           name: Linux Build
           path: |
-            target/i686-unknown-linux-gnu/release/iconforge.so
+            target/i686-unknown-linux-gnu/release/libiconforge.so
             target/iconforge.dm
 
   build-linux-x64:
@@ -160,12 +160,12 @@ jobs:
         run: cargo build --target x86_64-unknown-linux-gnu --locked --all-features --release
 
       - name: Rename x64 artifacts
-        run: mv target/x86_64-unknown-linux-gnu/release/iconforge.so target/x86_64-unknown-linux-gnu/release/iconforge64.so
+        run: mv target/x86_64-unknown-linux-gnu/release/libiconforge.so target/x86_64-unknown-linux-gnu/release/libiconforge64.so
 
       - uses: actions/upload-artifact@v6
         with:
           name: Linux Build x64
           path: |
-            target/x86_64-unknown-linux-gnu/release/iconforge64.so
+            target/x86_64-unknown-linux-gnu/release/libiconforge64.so
             target/x86_64-unknown-linux-gnu/release/iconforge
             target/iconforge.dm
